@@ -1,7 +1,7 @@
 use std::{
     env,
     fs::File,
-    io::{self, BufReader},
+    io::{self, BufReader, Write},
     path::Path,
     process::exit,
 };
@@ -17,7 +17,9 @@ fn main() {
 
     let args: Vec<String> = env::args().skip(1).collect();
     match args.len() {
-        0 => unimplemented!(), // Interactive
+        0 => {
+            let _ = run_prompt(&mut scanner);
+        } // Interactive
         1 => {
             let file_path = Path::new(&args[0]);
             let mut buffer = read_file(file_path).unwrap_or_else(|err| {
@@ -48,4 +50,32 @@ fn read_file(path: &Path) -> io::Result<BufReader<File>> {
             "File doesn't exist or has wrong extension",
         ))
     }
+}
+
+fn run_prompt(scanner: &mut Scanner) -> io::Result<()> {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    loop {
+        print!(">> ");
+        stdout.flush()?;
+
+        let mut buf: String = String::new();
+        let bytes_read = stdin.read_line(&mut buf);
+
+        match bytes_read {
+            Ok(s) => {
+                if s == 1 {
+                    break;
+                } else {
+                    scanner.scan_line(buf, 0);
+                    dbg!(&scanner);
+                }
+            }
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => break,
+            Err(e) => return Err(e),
+        }
+    }
+
+    Ok(())
 }

@@ -32,7 +32,7 @@ impl ScannerError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Scanner {
     errors: Vec<ScannerError>,
     tokens: Vec<Token>,
@@ -44,6 +44,9 @@ impl Scanner {
             let line: String = line_result.expect("Failed to read line");
             self.scan_line(line, pos_v);
         }
+
+        self.tokens
+            .push(Token::new(TokenType::EOF, (buffer.lines().count(), 0)));
     }
 
     pub fn scan_line(&mut self, line: String, pos_v: usize) {
@@ -153,8 +156,7 @@ impl Scanner {
                         literal.push(char);
 
                         if let Some(token) = Scanner::scan_token(&literal) {
-                            self.tokens
-                                .push(Token::new(token, &literal, (pos_v, pos_h)));
+                            self.tokens.push(Token::new(token, (pos_v, pos_h)));
                             literal.clear();
                         }
                     }
@@ -164,7 +166,6 @@ impl Scanner {
 
                         self.tokens.push(Token::new(
                             TokenType::Comment(literal.to_owned()),
-                            &literal,
                             (pos_v, pos_h),
                         ));
 
@@ -258,19 +259,10 @@ impl Scanner {
 
     fn add_token(&mut self, pos: (usize, usize), literal: &str) {
         if let Some(token) = Scanner::scan_token(literal) {
-            self.tokens.push(Token::new(token, literal, pos));
+            self.tokens.push(Token::new(token, pos));
         } else {
             self.errors
                 .push(ScannerError::new(pos, "Not a valid token"));
-        }
-    }
-}
-
-impl Default for Scanner {
-    fn default() -> Self {
-        Self {
-            errors: vec![],
-            tokens: vec![],
         }
     }
 }

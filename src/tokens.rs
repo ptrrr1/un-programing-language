@@ -72,7 +72,7 @@ pub enum TokenType {
 
 pub struct Token {
     token_type: TokenType,
-    lexeme: String,
+    //lexeme: String,
     //literal: Literal,
     line: (usize, usize),
 }
@@ -80,7 +80,7 @@ pub struct Token {
 impl Token {
     pub fn new(
         token_type: TokenType,
-        lexeme: &str,
+        //lexeme: &str,
         //literal_value: String,
         line: (usize, usize),
     ) -> Self {
@@ -100,7 +100,7 @@ impl Token {
 
         Token {
             token_type,
-            lexeme: lexeme.to_string(),
+            //lexeme: lexeme.to_string(),
             //literal,
             line,
         }
@@ -111,10 +111,10 @@ impl Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(
             f,
-            "[{:?} : Token::{:?} '{}']",
+            "[{:?} : Token::{:?}]",
             self.line,
             self.token_type,
-            self.lexeme //, self.literal
+            //self.lexeme //, self.literal
         )
     }
 }
