@@ -1,12 +1,14 @@
 use std::fmt::{Debug, Formatter, Result};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum TokenType {
     // Single char tokens
     LeftParentesis,
     RightParentesis,
     LeftBrace,
     RightBrace,
+    LeftBracket,
+    RightBracket,
     Comma,
     Dot,
     Semicolon,

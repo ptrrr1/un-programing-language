@@ -40,13 +40,15 @@ pub struct Scanner {
 
 impl Scanner {
     pub fn scan_file(&mut self, buffer: &mut BufReader<File>) {
+        let mut last_line: usize = 0;
         for (pos_v, line_result) in buffer.lines().enumerate() {
             let line: String = line_result.expect("Failed to read line");
             self.scan_line(line, pos_v);
+            last_line = pos_v;
         }
 
         self.tokens
-            .push(Token::new(TokenType::EOF, (buffer.lines().count(), 0)));
+            .push(Token::new(TokenType::EOF, (last_line + 1, 0)));
     }
 
     pub fn scan_line(&mut self, line: String, pos_v: usize) {
@@ -54,26 +56,41 @@ impl Scanner {
         let mut literal = String::new();
 
         let mut state = States::Start;
-        //let mut dot_count: u32 = 0;
 
+        let mut seen_dot = false;
+
+        // TODO: use chars.peek() instead for the loop, makes it easier to reprocess
+        // but i'll likely lose the lookahead feature
         while let Some((pos_h, char)) = chars.next() {
             match state {
                 States::Start => match char {
                     _ if char.is_ascii_digit() => {
+                        seen_dot = false;
                         literal.push(char);
 
-                        if Scanner::makes_token_with_next(&mut chars, &literal) {
-                            state = States::InNumber;
-                            continue;
-                        }
+                        match chars.peek() {
+                            Some((_, c)) if c.is_ascii_digit() || *c == '.' => {
+                                state = States::InNumber;
+                                continue;
+                            }
+                            Some((_, c)) if c.is_ascii_alphabetic() => {
+                                self.add_token((pos_v, pos_h), &literal);
+                                literal.clear();
+                                state = States::Start;
 
-                        self.add_token((pos_v, pos_h), &literal);
-                        literal.clear();
+                                self.errors
+                                    .push(ScannerError::new((pos_v, pos_h), "Missing whitespace"));
+                            }
+                            _ => {
+                                self.add_token((pos_v, pos_h), &literal);
+                                literal.clear();
+                            }
+                        }
                     }
                     _ if char.is_ascii_alphabetic() => {
                         literal.push(char);
 
-                        if Scanner::makes_token_with_next(&mut chars, &literal) {
+                        if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
                             state = States::InIdentifier; // Or Keyword
                             continue;
                         }
@@ -96,7 +113,7 @@ impl Scanner {
                     _ => {
                         literal.push(char);
 
-                        if Scanner::makes_token_with_next(&mut chars, &literal) {
+                        if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
                             continue;
                         }
 
@@ -106,18 +123,52 @@ impl Scanner {
                 },
 
                 States::InNumber => match char {
-                    _ if char.is_ascii_digit() || char == '.' => {
+                    // 12.34.54 => '12.34' '.' and '54' + error
+                    '.' => {
+                        seen_dot = true;
+
+                        match chars.peek() {
+                            Some((_, c)) if c.is_ascii_digit() => literal.push(char),
+                            Some((_, c)) if *c == '.' => {
+                                self.add_token((pos_v, pos_h - 1), &literal);
+                                literal.clear();
+                                literal.push(char); // Reprocess it, expecting TokenType::DotDot
+                                state = States::Start;
+                            }
+                            _ => {
+                                self.add_token((pos_v, pos_h - 1), &literal);
+                                self.add_token((pos_v, pos_h), &char.to_string());
+                                literal.clear();
+                                state = States::Start;
+                            }
+                        }
+                    }
+                    _ if char.is_ascii_digit() => {
                         literal.push(char);
 
-                        if Scanner::makes_token_with_next(&mut chars, &literal) {
-                            continue;
+                        match chars.peek() {
+                            Some((_, c)) if c.is_ascii_digit() => continue,
+                            Some((_, c)) if *c == '.' && !seen_dot => continue,
+                            Some((_, c)) if *c == '.' && seen_dot => {
+                                // Consume token
+                                self.errors.push(ScannerError::new(
+                                    (pos_v, pos_h),
+                                    "Unexpected '.' in number literal",
+                                ));
+                            }
+                            Some((_, c)) if c.is_ascii_alphabetic() => {
+                                // Consume token
+                                self.errors
+                                    .push(ScannerError::new((pos_v, pos_h), "Missing whitespace"));
+                            }
+                            _ => {} // Consume token
                         }
 
                         self.add_token((pos_v, pos_h), &literal);
                         literal.clear();
                         state = States::Start;
                     }
-                    _ => unimplemented!(), // alphabetic is error, + - > etc is ok
+                    _ => unimplemented!(),
                 },
 
                 States::InString => match char {
@@ -139,7 +190,7 @@ impl Scanner {
                     _ if char.is_ascii_alphanumeric() => {
                         literal.push(char);
 
-                        if Scanner::makes_token_with_next(&mut chars, &literal) {
+                        if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
                             continue;
                         }
 
@@ -184,6 +235,8 @@ impl Scanner {
             ")" => Some(TokenType::RightParentesis),
             "{" => Some(TokenType::LeftBrace),
             "}" => Some(TokenType::RightBrace),
+            "[" => Some(TokenType::LeftBracket),
+            "]" => Some(TokenType::RightBracket),
             "," => Some(TokenType::Comma),
             "." => Some(TokenType::Dot),
             ";" => Some(TokenType::Semicolon),
@@ -228,10 +281,14 @@ impl Scanner {
             _ if literal.starts_with("\"") && literal.ends_with("\"") => {
                 Some(TokenType::String(literal.to_string()))
             }
-            _ if literal.parse::<i32>().is_ok() => {
+            _ if literal.chars().all(|c| c.is_ascii_digit()) => {
                 Some(TokenType::NumberInt(literal.parse::<i32>().unwrap()))
             }
-            _ if literal.parse::<f32>().is_ok() => {
+            _ if !literal.starts_with('-')
+                && literal.ends_with(|c: char| c.is_ascii_digit())
+                && literal.starts_with(|c: char| c.is_ascii_digit())
+                && literal.contains('.') =>
+            {
                 Some(TokenType::NumberFloat(literal.parse::<f32>().unwrap()))
             }
             _ if literal.starts_with(|c: char| c.is_ascii_alphabetic())
@@ -246,15 +303,15 @@ impl Scanner {
     fn makes_token_with_next(
         chars: &mut Peekable<Enumerate<str::Chars<'_>>>,
         literal: &str,
-    ) -> bool {
+    ) -> Option<TokenType> {
         if let Some(ch) = chars.peek().map(|(_, c)| *c) {
             let mut potential_literal = literal.to_string();
             potential_literal.push(ch);
 
-            return Scanner::scan_token(&potential_literal).is_some();
+            return Scanner::scan_token(&potential_literal);
         }
 
-        false
+        None
     }
 
     fn add_token(&mut self, pos: (usize, usize), literal: &str) {
@@ -264,5 +321,13 @@ impl Scanner {
             self.errors
                 .push(ScannerError::new(pos, "Not a valid token"));
         }
+    }
+
+    pub fn errors(&self) -> &[ScannerError] {
+        &self.errors
+    }
+
+    pub fn tokens(&self) -> &[Token] {
+        &self.tokens
     }
 }

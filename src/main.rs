@@ -12,14 +12,12 @@ pub mod parser;
 pub mod scanner;
 pub mod tokens;
 
-fn main() {
+fn main() -> io::Result<()> {
     let mut scanner = Scanner::default();
 
     let args: Vec<String> = env::args().skip(1).collect();
     match args.len() {
-        0 => {
-            let _ = run_prompt(&mut scanner);
-        } // Interactive
+        0 => run_prompt(&mut scanner)?, // Interactive
         1 => {
             let file_path = Path::new(&args[0]);
             let mut buffer = read_file(file_path).unwrap_or_else(|err| {
@@ -36,6 +34,8 @@ fn main() {
             exit(64);
         }
     };
+
+    Ok(())
 }
 
 fn read_file(path: &Path) -> io::Result<BufReader<File>> {
