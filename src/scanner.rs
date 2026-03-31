@@ -87,7 +87,7 @@ impl Scanner {
                             }
                         }
                     }
-                    _ if char.is_ascii_alphabetic() => {
+                    _ if char.is_ascii_alphabetic() || char == '_' => {
                         literal.push(char);
 
                         if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
@@ -187,7 +187,7 @@ impl Scanner {
                 },
 
                 States::InIdentifier | States::InExposedFunction => match char {
-                    _ if char.is_ascii_alphanumeric() => {
+                    _ if char.is_ascii_alphanumeric() || char == '_' => {
                         literal.push(char);
 
                         if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
@@ -274,7 +274,7 @@ impl Scanner {
                 && literal
                     .chars()
                     .skip(1)
-                    .all(|c: char| c.is_ascii_alphanumeric()) =>
+                    .all(|c: char| c.is_ascii_alphanumeric() || c == '_') =>
             {
                 Some(TokenType::ExposedFunction(literal.to_string()))
             }
@@ -291,8 +291,10 @@ impl Scanner {
             {
                 Some(TokenType::NumberFloat(literal.parse::<f32>().unwrap()))
             }
-            _ if literal.starts_with(|c: char| c.is_ascii_alphabetic())
-                && literal.chars().all(|c| c.is_ascii_alphanumeric()) =>
+            _ if literal.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+                && literal
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_') =>
             {
                 Some(TokenType::Identifier(literal.to_string()))
             }
