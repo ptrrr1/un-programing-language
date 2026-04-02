@@ -6,8 +6,11 @@ use std::{
     process::exit,
 };
 
+use parser::Parser;
 use scanner::Scanner;
+use tokens::TokenType;
 
+pub mod errors;
 pub mod parser;
 pub mod scanner;
 pub mod tokens;
@@ -27,7 +30,17 @@ fn main() -> io::Result<()> {
 
             scanner.scan_file(&mut buffer);
 
-            dbg!(scanner);
+            dbg!(&scanner);
+
+            let tokens = scanner
+                .into_tokens() // Destroys Scanner
+                .into_iter()
+                .filter(|t| !matches!(t.token_type, TokenType::Space | TokenType::EOF));
+
+            let mut parser = Parser::new(tokens);
+            parser.parse_tokens();
+
+            dbg!(&parser);
         } // File
         _ => {
             eprintln!("Usage: un [script]");

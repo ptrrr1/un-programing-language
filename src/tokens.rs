@@ -72,11 +72,12 @@ pub enum TokenType {
 //     Neither,
 // }
 
+#[derive(Clone)]
 pub struct Token {
-    token_type: TokenType,
+    pub token_type: TokenType,
     //lexeme: String,
     //literal: Literal,
-    line: (usize, usize),
+    pub line: (usize, usize),
 }
 
 impl Token {

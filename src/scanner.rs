@@ -5,7 +5,10 @@ use std::{
     str,
 };
 
-use crate::tokens::{Token, TokenType};
+use crate::{
+    errors::Error,
+    tokens::{Token, TokenType},
+};
 
 enum States {
     Start,
@@ -16,25 +19,9 @@ enum States {
     InComment,
 }
 
-#[derive(Debug)]
-pub struct ScannerError {
-    pos: (usize, usize),
-    msg: String,
-    //val: ScannerErrorType,
-}
-
-impl ScannerError {
-    pub fn new(pos: (usize, usize), msg: &str) -> Self {
-        Self {
-            pos,
-            msg: msg.to_string(),
-        }
-    }
-}
-
 #[derive(Debug, Default)]
 pub struct Scanner {
-    errors: Vec<ScannerError>,
+    errors: Vec<Error>,
     tokens: Vec<Token>,
 }
 
@@ -79,7 +66,7 @@ impl Scanner {
                                 state = States::Start;
 
                                 self.errors
-                                    .push(ScannerError::new((pos_v, pos_h), "Missing whitespace"));
+                                    .push(Error::new((pos_v, pos_h), "Missing whitespace"));
                             }
                             _ => {
                                 self.add_token((pos_v, pos_h), &literal);
@@ -151,7 +138,7 @@ impl Scanner {
                             Some((_, c)) if *c == '.' && !seen_dot => continue,
                             Some((_, c)) if *c == '.' && seen_dot => {
                                 // Consume token
-                                self.errors.push(ScannerError::new(
+                                self.errors.push(Error::new(
                                     (pos_v, pos_h),
                                     "Unexpected '.' in number literal",
                                 ));
@@ -159,7 +146,7 @@ impl Scanner {
                             Some((_, c)) if c.is_ascii_alphabetic() => {
                                 // Consume token
                                 self.errors
-                                    .push(ScannerError::new((pos_v, pos_h), "Missing whitespace"));
+                                    .push(Error::new((pos_v, pos_h), "Missing whitespace"));
                             }
                             _ => {} // Consume token
                         }
@@ -181,7 +168,7 @@ impl Scanner {
                     }
                     _ if chars.peek().is_none() => {
                         self.errors
-                            .push(ScannerError::new((pos_v, pos_h), "Unclosed String"));
+                            .push(Error::new((pos_v, pos_h), "Unclosed String"));
                     } // error
                     _ => literal.push(char),
                 },
@@ -320,16 +307,15 @@ impl Scanner {
         if let Some(token) = Scanner::scan_token(literal) {
             self.tokens.push(Token::new(token, pos));
         } else {
-            self.errors
-                .push(ScannerError::new(pos, "Not a valid token"));
+            self.errors.push(Error::new(pos, "Not a valid token"));
         }
     }
 
-    pub fn errors(&self) -> &[ScannerError] {
-        &self.errors
+    pub fn into_errors(self) -> Vec<Error> {
+        self.errors
     }
 
-    pub fn tokens(&self) -> &[Token] {
-        &self.tokens
+    pub fn into_tokens(self) -> Vec<Token> {
+        self.tokens
     }
 }
