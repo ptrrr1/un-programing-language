@@ -57,7 +57,6 @@ pub enum TokenType {
 
     Comment(String),
     Space,
-    EOF,
 }
 
 // #[derive(Debug)]

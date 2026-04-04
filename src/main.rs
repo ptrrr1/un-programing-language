@@ -35,7 +35,7 @@ fn main() -> io::Result<()> {
             let tokens = scanner
                 .into_tokens() // Destroys Scanner
                 .into_iter()
-                .filter(|t| !matches!(t.token_type, TokenType::Space | TokenType::EOF));
+                .filter(|t| !matches!(t.token_type, TokenType::Space));
 
             let mut parser = Parser::new(tokens);
             parser.parse_tokens();
