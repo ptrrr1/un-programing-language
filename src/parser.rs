@@ -15,20 +15,18 @@ UNARY -> ( "not" | "-" ) UNARY | PRIMARY
 PRIMARY -> LITERAL | STRING | BOOL | NIL | "(" EXPRESSION ")"
 */
 
-use std::{
-    iter::{Filter, Peekable},
-    vec::IntoIter,
-};
+use std::iter::Peekable;
 
 use crate::{
-    errors::Error,
+    errors::{Error, ParserError},
     tokens::{Token, TokenType},
 };
 
 #[derive(Debug)]
 pub struct Parser<I: Iterator<Item = Token>> {
     tokens: Peekable<I>,
-    errors: Vec<Error>,
+    errors: Vec<Error<ParserError>>,
+    expr: Vec<Expr>,
 }
 
 impl<I: Iterator<Item = Token>> Parser<I> {
@@ -36,13 +34,14 @@ impl<I: Iterator<Item = Token>> Parser<I> {
         Parser {
             tokens: tokens.peekable(),
             errors: vec![],
+            expr: vec![],
         }
     }
 
     pub fn parse_tokens(&mut self) {
         while self.tokens.peek().is_some() {
             let expr = self.expression();
-            println!("{:#?}", expr);
+            self.expr.push(expr);
         }
     }
 
