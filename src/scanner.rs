@@ -27,15 +27,10 @@ pub struct Scanner {
 
 impl Scanner {
     pub fn scan_file(&mut self, buffer: &mut BufReader<File>) {
-        let mut last_line: usize = 0;
         for (pos_v, line_result) in buffer.lines().enumerate() {
             let line: String = line_result.expect("Failed to read line");
             self.scan_line(line, pos_v);
-            last_line = pos_v;
         }
-
-        self.tokens
-            .push(Token::new(TokenType::EOF, (last_line + 1, 0)));
     }
 
     pub fn scan_line(&mut self, line: String, pos_v: usize) {
@@ -110,12 +105,11 @@ impl Scanner {
                 },
 
                 States::InNumber => match char {
-                    // 12.34.54 => '12.34' '.' and '54' + error
+                    // 12.34.54 => '12.3456' + error
                     '.' => {
-                        seen_dot = true;
-
                         match chars.peek() {
-                            Some((_, c)) if c.is_ascii_digit() => literal.push(char),
+                            Some((_, c)) if c.is_ascii_digit() && !seen_dot => literal.push(char),
+                            Some((_, c)) if c.is_ascii_digit() && seen_dot => continue,
                             Some((_, c)) if *c == '.' => {
                                 self.add_token((pos_v, pos_h - 1), &literal);
                                 literal.clear();
@@ -129,6 +123,8 @@ impl Scanner {
                                 state = States::Start;
                             }
                         }
+
+                        seen_dot = true;
                     }
                     _ if char.is_ascii_digit() => {
                         literal.push(char);
@@ -137,11 +133,12 @@ impl Scanner {
                             Some((_, c)) if c.is_ascii_digit() => continue,
                             Some((_, c)) if *c == '.' && !seen_dot => continue,
                             Some((_, c)) if *c == '.' && seen_dot => {
-                                // Consume token
                                 self.errors.push(Error::new(
                                     (pos_v, pos_h),
                                     "Unexpected '.' in number literal",
                                 ));
+
+                                continue;
                             }
                             Some((_, c)) if c.is_ascii_alphabetic() => {
                                 // Consume token
