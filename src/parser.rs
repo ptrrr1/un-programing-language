@@ -27,6 +27,7 @@ pub struct Parser<I: Iterator<Item = Token>> {
     tokens: Peekable<I>,
     errors: Vec<Error<ParserError>>,
     expr: Vec<Expr>,
+    // need_sync: bool,
 }
 
 impl<I: Iterator<Item = Token>> Parser<I> {
@@ -35,11 +36,17 @@ impl<I: Iterator<Item = Token>> Parser<I> {
             tokens: tokens.peekable(),
             errors: vec![],
             expr: vec![],
+            // need_sync: false,
         }
     }
 
     pub fn parse_tokens(&mut self) {
         while self.tokens.peek().is_some() {
+            // if self.need_sync {
+            //     self.synchronize();
+            //     self.need_sync = false;
+            // }
+
             let expr = self.expression();
             self.expr.push(expr);
         }
@@ -132,11 +139,19 @@ impl<I: Iterator<Item = Token>> Parser<I> {
             if self
                 .tokens
                 .next_if(|t| matches!(t.token_type, TokenType::RightParentesis))
-                .is_some()
+                .is_none()
             {
-                // TODO: write it better
-            } else {
-                eprintln!("Error missing right parenthesis")
+                // TODO: find position
+                // I have the line position in token, but i'm not consuming it here
+                // there's a way to do it by storing the values whenever I consume but
+                // fuckkkkkk that's stupid considering i'm doing it across multiple fuctions
+                let pos = match self.tokens.peek() {
+                    Some(t) => t.line, // Takes the next token's position...
+                    None => (usize::MAX, usize::MIN),
+                };
+
+                self.errors
+                    .push(Error::new(pos, ParserError::UnclosedGrouping));
             }
             return Expr::grouping(expr);
         } else if let Some(t) = self.tokens.next_if(|t| {
@@ -149,12 +164,50 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                     | TokenType::NumberInt(_)
                     | TokenType::NumberFloat(_)
                     | TokenType::Identifier(_)
+                    | TokenType::ExposedFunction(_)
             )
         }) {
             return Expr::literal(t);
         }
 
-        panic!("Malformed code");
+        // If not literal or grouping then error
+        // self.need_sync = true;
+        if let Some(t) = self.tokens.next() {
+            // More accurate to say: expected expression
+            self.errors
+                .push(Error::new(t.line, ParserError::InvalidToken(t.token_type)));
+        } else {
+            self.errors.push(Error::new(
+                (usize::MAX, usize::MIN),
+                ParserError::UnexpectedEOF,
+            ));
+        }
+
+        // TODO: This is clearly wrong... but idk what to do
+        //  1 ++ 2 becomes -> binary(1, +, 2)
+        // 1.++ 2 becomes -> literal(1), literal(1)
+        self.expression()
+    }
+
+    fn synchronize(&mut self) {
+        while self.tokens.peek().is_some_and(|t| {
+            !matches!(
+                t.token_type,
+                TokenType::Semicolon
+                    | TokenType::Fun
+                    | TokenType::Return
+                    | TokenType::Let
+                    | TokenType::For
+                    | TokenType::While
+                    | TokenType::If
+            )
+        }) {
+            self.tokens.next();
+        }
+    }
+
+    pub fn into_expr(self) -> Vec<Expr> {
+        self.expr
     }
 }
 
@@ -163,7 +216,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
 // Literal  : Value
 // Unary    : Operator Expr
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,

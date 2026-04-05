@@ -9,11 +9,13 @@ use std::{
 use parser::Parser;
 use scanner::Scanner;
 use tokens::TokenType;
+use types::TypedExpr;
 
 pub mod errors;
 pub mod parser;
 pub mod scanner;
 pub mod tokens;
+pub mod types;
 
 fn main() -> io::Result<()> {
     let mut scanner = Scanner::default();
@@ -30,7 +32,7 @@ fn main() -> io::Result<()> {
 
             scanner.scan_file(&mut buffer);
 
-            dbg!(&scanner);
+            //dbg!(&scanner);
 
             let tokens = scanner
                 .into_tokens() // Destroys Scanner
@@ -40,7 +42,12 @@ fn main() -> io::Result<()> {
             let mut parser = Parser::new(tokens);
             parser.parse_tokens();
 
-            dbg!(&parser);
+            //dbg!(&parser);
+
+            let expr = parser.into_expr();
+
+            let i = expr.iter().map(|expr| TypedExpr::try_from(expr.clone()));
+            i.for_each(|v| println!("{:#?}", v));
         } // File
         _ => {
             eprintln!("Usage: un [script]");

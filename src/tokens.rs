@@ -59,64 +59,20 @@ pub enum TokenType {
     Space,
 }
 
-// #[derive(Debug)]
-// pub enum Literal {
-//     StringValue(String),
-//     IntegerValue(i32),
-//     FloatValue(f32),
-//     BooleanValue(bool),
-//     IdentifierValue(String),
-//     ExposedFunction(String), // Might be removed later, Idk how to impl this aspect
-//     NilValue,
-//     Neither,
-// }
-
 #[derive(Clone)]
 pub struct Token {
     pub token_type: TokenType,
-    //lexeme: String,
-    //literal: Literal,
     pub line: (usize, usize),
 }
 
 impl Token {
-    pub fn new(
-        token_type: TokenType,
-        //lexeme: &str,
-        //literal_value: String,
-        line: (usize, usize),
-    ) -> Self {
-        //unimplemented!();
-
-        // let literal = match token_type {
-        //     TokenType::String => Literal::StringValue(literal_value.trim_matches('"').to_string()),
-        //     TokenType::NumberInt => Literal::IntegerValue(literal_value.parse::<i32>().unwrap()),
-        //     TokenType::NumberFloat => Literal::FloatValue(literal_value.parse::<f32>().unwrap()),
-        //     TokenType::Identifier => Literal::IdentifierValue(literal_value),
-        //     TokenType::ExposedFunction => Literal::ExposedFunction(literal_value),
-        //     TokenType::True => Literal::BooleanValue(true),
-        //     TokenType::False => Literal::BooleanValue(false),
-        //     TokenType::Nil => Literal::NilValue,
-        //     _ => Literal::Neither,
-        // };
-
-        Token {
-            token_type,
-            //lexeme: lexeme.to_string(),
-            //literal,
-            line,
-        }
+    pub fn new(token_type: TokenType, line: (usize, usize)) -> Self {
+        Token { token_type, line }
     }
 }
 
 impl Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(
-            f,
-            "[{:?} : Token::{:?}]",
-            self.line,
-            self.token_type,
-            //self.lexeme //, self.literal
-        )
+        write!(f, "[{:?} : Token::{:?}]", self.line, self.token_type,)
     }
 }

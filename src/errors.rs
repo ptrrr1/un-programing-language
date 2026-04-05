@@ -1,3 +1,5 @@
+use crate::tokens::TokenType;
+
 #[derive(Debug, Clone)]
 pub struct Error<T> {
     pos: (usize, usize),
@@ -20,10 +22,21 @@ pub enum ScannerError {
 }
 
 #[derive(Debug)]
-pub enum ParserError {}
+pub enum ParserError {
+    InvalidToken(TokenType),
+    UnexpectedEOF,
+    UnclosedGrouping, // Missing ')'
+}
+
+#[derive(Debug)]
+pub enum TypeError {
+    Mismatch,
+}
 
 pub trait _Error {}
 
 impl _Error for ScannerError {}
 
 impl _Error for ParserError {}
+
+impl _Error for TypeError {}
