@@ -6,7 +6,7 @@ use std::{
     process::exit,
 };
 
-use parser::{Parser, expr::Expr, typed_expr::TypedExpr};
+use parser::{Parser, typed_expr::TypedExpr};
 use scanner::Scanner;
 use tokens::TokenType;
 

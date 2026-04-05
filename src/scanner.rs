@@ -33,6 +33,7 @@ impl Scanner {
         }
     }
 
+    // TODO: Return -> { tokens: Vec<Token>, err: Vec<Error<ScannerError>> }
     pub fn scan_line(&mut self, line: String, pos_v: usize) {
         let mut chars = line.chars().enumerate().peekable();
         let mut literal = String::new();
@@ -219,8 +220,8 @@ impl Scanner {
 
     fn scan_token(literal: &str) -> Option<TokenType> {
         match literal {
-            "(" => Some(TokenType::LeftParentesis),
-            ")" => Some(TokenType::RightParentesis),
+            "(" => Some(TokenType::LeftParenthesis),
+            ")" => Some(TokenType::RightParenthesis),
             "{" => Some(TokenType::LeftBrace),
             "}" => Some(TokenType::RightBrace),
             "[" => Some(TokenType::LeftBracket),
@@ -318,6 +319,8 @@ impl Scanner {
     pub fn into_errors(self) -> Vec<Error<ScannerError>> {
         self.errors
     }
+
+    // TODO: pub fn has_error
 
     pub fn into_tokens(self) -> Vec<Token> {
         self.tokens

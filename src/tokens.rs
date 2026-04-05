@@ -3,8 +3,8 @@ use std::fmt::{Debug, Formatter, Result};
 #[derive(Debug, Clone)]
 pub enum TokenType {
     // Single char tokens
-    LeftParentesis,
-    RightParentesis,
+    LeftParenthesis,
+    RightParenthesis,
     LeftBrace,
     RightBrace,
     LeftBracket,
@@ -30,12 +30,13 @@ pub enum TokenType {
     DotDot,         // .. for [n..m;s]
 
     // Literals
-    Identifier(String),
-    ExposedFunction(String), // '@func'
-    String(String),
-    NumberInt(i32),
+    Identifier(String),      // TODO: Change to str
+    ExposedFunction(String), // TODO: Change to str '@func'
+    String(String),          // TODO: Change to str
+    NumberInt(i32),          // TODO: Condense both into Number
     NumberFloat(f32),
 
+    // TODO: Add type keywords: string, number and bool
     // Keywords
     Not,
     And,

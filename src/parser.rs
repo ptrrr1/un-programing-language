@@ -46,8 +46,10 @@ impl<I: Iterator<Item = Token>> Parser<I> {
         }
     }
 
+    // TODO: change signature, receive a list of tokens and return { expr: Vec<Expr>, err: Vec<Err>  }
     pub fn parse_tokens(&mut self) {
         while self.tokens.peek().is_some() {
+            // TODO: After adding result, synchronize if err
             // if self.need_sync {
             //     self.synchronize();
             //     self.need_sync = false;
@@ -58,6 +60,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
         }
     }
 
+    // TODO: Alter Return, Add Result<Expr, Err>
     fn expression(&mut self) -> Expr {
         self.equality()
     }
@@ -138,13 +141,14 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     fn primary(&mut self) -> Expr {
         if self
             .tokens
-            .next_if(|t| matches!(t.token_type, TokenType::LeftParentesis))
+            .next_if(|t| matches!(t.token_type, TokenType::LeftParenthesis))
             .is_some()
         {
             let expr = self.expression();
+            // TODO: change into a match, that'll allow me to have the position value of err
             if self
                 .tokens
-                .next_if(|t| matches!(t.token_type, TokenType::RightParentesis))
+                .next_if(|t| matches!(t.token_type, TokenType::RightParenthesis))
                 .is_none()
             {
                 // TODO: find position
@@ -168,13 +172,14 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                     | TokenType::Nil
                     | TokenType::String(_)
                     | TokenType::NumberInt(_)
-                    | TokenType::NumberFloat(_)
-                    | TokenType::Identifier(_)
-                    | TokenType::ExposedFunction(_)
+                    | TokenType::NumberFloat(_) // | TokenType::Identifier(_)
+                                                // | TokenType::ExposedFunction(_)
             )
         }) {
             return Expr::literal(t);
         }
+
+        // TODO: Return Err
 
         // If not literal or grouping then error
         // self.need_sync = true;
@@ -215,4 +220,6 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     pub fn into_expr(self) -> Vec<Expr> {
         self.expr
     }
+
+    // TODO: add has_err
 }

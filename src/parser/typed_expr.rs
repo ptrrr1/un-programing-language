@@ -131,6 +131,7 @@ impl TryFrom<Expr> for TypedExpr {
     fn try_from(expr: Expr) -> Result<Self, TypeError> {
         match expr {
             Expr::Literal(token) => {
+                // TODO: Impl TryFrom<Token> to TVal
                 let typed_value = match token.token_type {
                     TokenType::True => TValues::Bool(true),
                     TokenType::False => TValues::Bool(false),

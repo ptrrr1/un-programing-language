@@ -2,7 +2,7 @@ use super::_Error;
 
 #[derive(Debug)]
 pub enum TypeError {
-    Mismatch,
+    Mismatch, // TODO: Add Expected and Found fields
 }
 
 impl _Error for TypeError {}
