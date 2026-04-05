@@ -17,10 +17,16 @@ PRIMARY -> LITERAL | STRING | BOOL | NIL | "(" EXPRESSION ")"
 
 use std::iter::Peekable;
 
+use expr::Expr;
+
 use crate::{
-    errors::{Error, ParserError},
+    errors::{Error, parser_errors::ParserError},
     tokens::{Token, TokenType},
 };
+
+pub mod expr;
+pub mod typed_expr;
+pub mod types;
 
 #[derive(Debug)]
 pub struct Parser<I: Iterator<Item = Token>> {
@@ -208,50 +214,5 @@ impl<I: Iterator<Item = Token>> Parser<I> {
 
     pub fn into_expr(self) -> Vec<Expr> {
         self.expr
-    }
-}
-
-// Binary   : Expr Operator Expr
-// Grouping : Expr
-// Literal  : Value
-// Unary    : Operator Expr
-
-#[derive(Debug, Clone)]
-pub enum Expr {
-    Binary {
-        left: Box<Expr>,
-        operator: Token,
-        right: Box<Expr>,
-    },
-    Unary {
-        operator: Token,
-        right: Box<Expr>,
-    },
-    Literal(Token),
-    Grouping(Box<Expr>),
-}
-
-impl Expr {
-    pub fn binary(left: Expr, op: Token, right: Expr) -> Expr {
-        Expr::Binary {
-            left: Box::new(left),
-            operator: op,
-            right: Box::new(right),
-        }
-    }
-
-    pub fn unary(op: Token, right: Expr) -> Expr {
-        Expr::Unary {
-            operator: op,
-            right: Box::new(right),
-        }
-    }
-
-    pub fn literal(token: Token) -> Expr {
-        Expr::Literal(token)
-    }
-
-    pub fn grouping(expr: Expr) -> Expr {
-        Expr::Grouping(Box::new(expr))
     }
 }

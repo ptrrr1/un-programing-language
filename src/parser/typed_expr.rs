@@ -1,44 +1,15 @@
 use crate::{
-    errors::TypeError,
-    parser::Expr,
+    errors::typed_parser_errors::TypeError,
+    parser::types::{TValues, Types},
     tokens::{Token, TokenType},
 };
 
-// TODO: Move to own file
-#[derive(Debug, Copy, Clone)]
-pub enum Types {
-    Bool,
-    Int,
-    Float,
-    String,
-    Nil,
-}
-
-#[derive(Debug, Clone)]
-pub enum TValues {
-    Bool(bool),
-    Int(i32),
-    Float(f32),
-    String(String),
-    Nil,
-}
-
-impl TValues {
-    pub fn as_type(self) -> Types {
-        match self {
-            TValues::Bool(_) => Types::Bool,
-            TValues::Int(_) => Types::Int,
-            TValues::Float(_) => Types::Float,
-            TValues::String(_) => Types::String,
-            TValues::Nil => Types::Nil,
-        }
-    }
-}
+use super::expr::Expr;
 
 #[derive(Debug, Clone)]
 pub struct TypedValue {
     line: (usize, usize),
-    type_t: TValues,
+    t_val: TValues,
 }
 
 #[derive(Debug, Clone)]
@@ -64,10 +35,92 @@ pub enum TypedExpr {
 impl TypedExpr {
     pub fn get_type(&self) -> Types {
         match *self {
-            TypedExpr::Literal(ref t) => t.type_t.clone().as_type(),
+            TypedExpr::Literal(ref t) => t.t_val.clone().as_type(),
             TypedExpr::Binary { t, .. }
             | TypedExpr::Unary { t, .. }
             | TypedExpr::Grouping { t, .. } => t,
+        }
+    }
+
+    pub fn eval(&self) -> TValues {
+        match self {
+            TypedExpr::Binary {
+                left,
+                operator,
+                right,
+                t,
+            } => {
+                let l = left.eval();
+                let r = right.eval();
+
+                match t {
+                    Types::Bool => match operator.token_type {
+                        TokenType::EqualEqual => TValues::Bool(l == r),
+                        TokenType::BangEqual => TValues::Bool(l != r),
+                        TokenType::Lesser => TValues::Bool(l < r),
+                        TokenType::LesserEqual => TValues::Bool(l <= r),
+                        TokenType::Greater => TValues::Bool(l > r),
+                        TokenType::GreaterEqual => TValues::Bool(l >= r),
+                        _ => unreachable!(),
+                    },
+                    Types::Int => match operator.token_type {
+                        TokenType::Plus => {
+                            TValues::Int(i32::try_from(l).unwrap() + i32::try_from(r).unwrap())
+                        }
+                        TokenType::Minus => {
+                            TValues::Int(i32::try_from(l).unwrap() - i32::try_from(r).unwrap())
+                        }
+                        TokenType::Star => {
+                            TValues::Int(i32::try_from(l).unwrap() * i32::try_from(r).unwrap())
+                        }
+                        _ => unreachable!(),
+                    },
+                    Types::Float => match operator.token_type {
+                        TokenType::Plus => {
+                            TValues::Float(f32::try_from(l).unwrap() + f32::try_from(r).unwrap())
+                        }
+                        TokenType::Minus => {
+                            TValues::Float(f32::try_from(l).unwrap() - f32::try_from(r).unwrap())
+                        }
+                        TokenType::Slash => {
+                            TValues::Float(f32::try_from(l).unwrap() / f32::try_from(r).unwrap())
+                        }
+                        TokenType::Star => {
+                            TValues::Float(f32::try_from(l).unwrap() * f32::try_from(r).unwrap())
+                        }
+                        _ => unreachable!(),
+                    },
+                    // Only one operation is possible with Strings
+                    Types::String => TValues::String(format!("{}{}", l.to_string(), r.to_string())),
+                    Types::Nil => unreachable!(),
+                }
+            }
+            TypedExpr::Unary {
+                operator, right, ..
+            } => {
+                let r = right.eval();
+
+                match operator.token_type {
+                    TokenType::Minus => match r {
+                        TValues::Int(v) => TValues::Int(-v),
+                        TValues::Float(v) => TValues::Float(-v),
+                        _ => unreachable!(),
+                    },
+                    // TODO: Decide if i want this configuration:
+                    // everything is truthy except for Nil and False
+                    // Ideally: 0 and "" (empty string) are falsy
+                    TokenType::Not => match r {
+                        TValues::Bool(v) => TValues::Bool(!v),
+                        TValues::Int(_) | TValues::Float(_) | TValues::String(_) => {
+                            TValues::Bool(false)
+                        }
+                        TValues::Nil => TValues::Bool(true),
+                    },
+                    _ => unreachable!(),
+                }
+            }
+            TypedExpr::Literal(typed_value) => typed_value.t_val.clone(),
+            TypedExpr::Grouping { inner, .. } => inner.eval(),
         }
     }
 }
@@ -91,7 +144,7 @@ impl TryFrom<Expr> for TypedExpr {
 
                 Ok(TypedExpr::Literal(TypedValue {
                     line: token.line,
-                    type_t: typed_value,
+                    t_val: typed_value,
                 }))
             }
             Expr::Grouping(expr) => {

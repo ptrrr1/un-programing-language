@@ -1,10 +1,11 @@
-use crate::tokens::TokenType;
+pub mod parser_errors;
+pub mod scanner_errors;
+pub mod typed_parser_errors;
 
 #[derive(Debug, Clone)]
 pub struct Error<T> {
     pos: (usize, usize),
     err_type: T,
-    //val: ScannerErrorType,
 }
 
 impl<T: _Error> Error<T> {
@@ -13,30 +14,4 @@ impl<T: _Error> Error<T> {
     }
 }
 
-#[derive(Debug)]
-pub enum ScannerError {
-    InvalidToken(String),
-    MissingWhitespace, // More generic with: MissingSeparation (space, comma, etc)
-    MultipleDecimalDivider,
-    UnclosedString,
-}
-
-#[derive(Debug)]
-pub enum ParserError {
-    InvalidToken(TokenType),
-    UnexpectedEOF,
-    UnclosedGrouping, // Missing ')'
-}
-
-#[derive(Debug)]
-pub enum TypeError {
-    Mismatch,
-}
-
 pub trait _Error {}
-
-impl _Error for ScannerError {}
-
-impl _Error for ParserError {}
-
-impl _Error for TypeError {}

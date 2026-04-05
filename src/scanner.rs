@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    errors::{Error, ScannerError},
+    errors::{Error, scanner_errors::ScannerError},
     tokens::{Token, TokenType},
 };
 
@@ -267,7 +267,7 @@ impl Scanner {
                 Some(TokenType::ExposedFunction(literal.to_string()))
             }
             _ if literal.starts_with("\"") && literal.ends_with("\"") => {
-                Some(TokenType::String(literal.to_string()))
+                Some(TokenType::String(literal.trim_matches('"').to_string()))
             }
             _ if literal.chars().all(|c| c.is_ascii_digit()) => {
                 Some(TokenType::NumberInt(literal.parse::<i32>().unwrap()))

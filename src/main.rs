@@ -6,23 +6,19 @@ use std::{
     process::exit,
 };
 
-use parser::Parser;
+use parser::{Parser, expr::Expr, typed_expr::TypedExpr};
 use scanner::Scanner;
 use tokens::TokenType;
-use types::TypedExpr;
 
 pub mod errors;
 pub mod parser;
 pub mod scanner;
 pub mod tokens;
-pub mod types;
 
 fn main() -> io::Result<()> {
-    let mut scanner = Scanner::default();
-
     let args: Vec<String> = env::args().skip(1).collect();
     match args.len() {
-        0 => run_prompt(&mut scanner)?, // Interactive
+        0 => run_prompt()?, // Interactive
         1 => {
             let file_path = Path::new(&args[0]);
             let mut buffer = read_file(file_path).unwrap_or_else(|err| {
@@ -30,6 +26,7 @@ fn main() -> io::Result<()> {
                 exit(66);
             });
 
+            let mut scanner = Scanner::default();
             scanner.scan_file(&mut buffer);
 
             //dbg!(&scanner);
@@ -47,7 +44,7 @@ fn main() -> io::Result<()> {
             let expr = parser.into_expr();
 
             let i = expr.iter().map(|expr| TypedExpr::try_from(expr.clone()));
-            i.for_each(|v| println!("{:#?}", v));
+            i.for_each(|v| println!("{:#?}", v.is_ok().then(|| v.unwrap().eval())));
         } // File
         _ => {
             eprintln!("Usage: un [script]");
@@ -72,7 +69,7 @@ fn read_file(path: &Path) -> io::Result<BufReader<File>> {
     }
 }
 
-fn run_prompt(scanner: &mut Scanner) -> io::Result<()> {
+fn run_prompt() -> io::Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
@@ -88,8 +85,30 @@ fn run_prompt(scanner: &mut Scanner) -> io::Result<()> {
                 if s == 1 {
                     break;
                 } else {
+                    let mut scanner = Scanner::default();
                     scanner.scan_line(buf, 0);
-                    dbg!(&scanner);
+                    // println!(":: {:#?}", &scanner);
+
+                    let tokens = scanner
+                        .into_tokens()
+                        .into_iter()
+                        .filter(|t| !matches!(t.token_type, TokenType::Space));
+                    // println!(":: {:#?}", &tokens);
+
+                    let mut parser = Parser::new(tokens);
+                    parser.parse_tokens();
+                    // println!(":: {:#?}", &parser);
+
+                    let expr = parser.into_expr().pop().unwrap();
+                    // println!(":: {:#?}", &expr);
+
+                    let typed_expr = TypedExpr::try_from(expr);
+                    // println!(":: {:#?}", &typed_expr);
+
+                    match typed_expr {
+                        Ok(texpr) => println!(":: {:?}", texpr.eval()),
+                        Err(err) => println!(":: Err: {:?}", err),
+                    }
                 }
             }
             Err(e) if e.kind() == io::ErrorKind::Interrupted => break,
