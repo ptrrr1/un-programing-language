@@ -6,7 +6,7 @@ use std::{
     process::exit,
 };
 
-use parser::{Parser, typed_expr::TypedExpr};
+use parser::{Parser, stmt::TypedStmt};
 use scanner::Scanner;
 use tokens::TokenType;
 
@@ -27,19 +27,22 @@ fn main() -> io::Result<()> {
             });
 
             let scanner_result = Scanner::scan_file(&mut buffer);
-            //dbg!(&scanner);
-
             let tokens = scanner_result
                 .into_tokens() // Destroys Scanner
                 .into_iter()
                 .filter(|t| !matches!(t.token_type, TokenType::Space));
 
             let parser_result = Parser::parse_tokens(tokens);
-            //dbg!(&parser);
 
-            let expr = parser_result.into_expr();
+            if parser_result.has_err() {
+                dbg!(&parser_result);
+                dbg!(parser_result.into_err());
+                exit(70);
+            }
 
-            let i = expr.iter().map(|expr| TypedExpr::try_from(expr.clone()));
+            let stmt = parser_result.into_stmt();
+
+            let i = stmt.iter().map(|s| TypedStmt::try_from(s.clone()));
             i.for_each(|v| println!("{:#?}", v.is_ok().then(|| v.unwrap().eval())));
         } // File
         _ => {
@@ -90,16 +93,21 @@ fn run_prompt() -> io::Result<()> {
                     // println!(":: {:#?}", &tokens);
 
                     let parser_result = Parser::parse_tokens(tokens);
-                    // println!(":: {:#?}", &parser);
+                    // println!(":: {:#?}", &parser_result);
 
-                    let expr = parser_result.into_expr().pop().unwrap();
+                    if parser_result.has_err() {
+                        println!("{:#?}", parser_result.into_err());
+                        continue;
+                    }
+
+                    let stmt = parser_result.into_stmt().pop().unwrap();
                     // println!(":: {:#?}", &expr);
 
-                    let typed_expr = TypedExpr::try_from(expr);
-                    // println!(":: {:#?}", &typed_expr);
+                    let typed_stmt = TypedStmt::try_from(stmt);
+                    // // println!(":: {:#?}", &typed_expr);
 
-                    match typed_expr {
-                        Ok(texpr) => println!(":: {:?}", texpr.eval()),
+                    match typed_stmt {
+                        Ok(typed_expr) => typed_expr.eval(),
                         Err(err) => println!(":: Err: {:?}", err),
                     }
                 }

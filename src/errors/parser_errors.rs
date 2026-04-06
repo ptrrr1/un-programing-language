@@ -4,7 +4,10 @@ use super::_Error;
 pub enum ParserError {
     InvalidToken(crate::tokens::TokenType),
     UnexpectedEOF,
-    UnclosedGrouping, // Missing ')'
+    UnclosedExpr, // Missing ')'
+    InvalidPrint,
+    UnterminatedStmt,
+    // ExpectedExpr,
 }
 
 impl _Error for ParserError {}

@@ -120,6 +120,7 @@ impl TypedExpr {
 impl TryFrom<Expr> for TypedExpr {
     type Error = TypeError;
 
+    // TODO: Construct Error from TypeError
     fn try_from(expr: Expr) -> Result<Self, TypeError> {
         match expr {
             Expr::Literal(token) => {

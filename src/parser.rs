@@ -6,6 +6,14 @@ Precedence (Lowest to Highest)
 / *
 - not
 
+PROGRAM -> STATEMENTS* EOF
+
+STATEMENT -> EXPR_STATEMENT | PRINT_STATEMENT
+
+PRINT_STATEMENT -> "print""("EXPRESSION ")"";"
+
+EXPR_STATEMENT -> EXPRESSION ";""
+
 EXPRESSION -> EQUALITY
 EQUALITY -> COMPARISON ( ( "==" | "!=" ) COMPARISON )*
 COMPARSION TERM ( ( "<" | "<=" | ">" | ">=" ) TERM )*
@@ -18,6 +26,7 @@ PRIMARY -> LITERAL | STRING | BOOL | NIL | "(" EXPRESSION ")"
 use std::iter::Peekable;
 
 use expr::Expr;
+use stmt::Stmt;
 
 use crate::{
     errors::{Error, Pos, parser_errors::ParserError},
@@ -25,21 +34,26 @@ use crate::{
 };
 
 pub mod expr;
+pub mod stmt;
 pub mod typed_expr;
 pub mod types;
 
 #[derive(Debug, Default)]
 pub struct ParserResult {
     errors: Vec<Error<ParserError>>,
-    expr: Vec<Expr>,
+    stmt: Vec<Stmt>,
 }
 
 impl ParserResult {
-    pub fn into_expr(self) -> Vec<Expr> {
-        self.expr
+    pub fn into_stmt(self) -> Vec<Stmt> {
+        self.stmt
     }
 
-    pub fn has_err(self) -> bool {
+    pub fn into_err(self) -> Vec<Error<ParserError>> {
+        self.errors
+    }
+
+    pub fn has_err(&self) -> bool {
         !self.errors.is_empty()
     }
 }
@@ -53,8 +67,8 @@ impl Parser {
 
         let mut t = tokens.peekable();
         while t.peek().is_some() {
-            match Self::expression(&mut t) {
-                Ok(expr) => parser_result.expr.push(expr),
+            match Self::statement(&mut t) {
+                Ok(stmt) => parser_result.stmt.push(stmt),
                 Err(e) => {
                     parser_result.errors.push(e);
                     Self::synchronize(&mut t);
@@ -63,6 +77,61 @@ impl Parser {
         }
 
         parser_result
+    }
+
+    fn statement<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        if let Some(t) = tokens.peek() {
+            match t.token_type {
+                TokenType::Print => Self::print_statement(tokens),
+                _ => Self::expr_statement(tokens),
+            }
+        } else {
+            Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF))
+        }
+    }
+
+    fn print_statement<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        let _print = tokens.next().unwrap(); // I know next is PRINT
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::LeftParenthesis),
+            ParserError::InvalidPrint,
+        )?;
+
+        // Check if next token is ')'
+        // A print() statement is not wrong, but maybe it should have a warning
+        let expr = Self::expression(tokens)?;
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::RightParenthesis),
+            ParserError::UnclosedExpr,
+        )?;
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Semicolon),
+            ParserError::UnterminatedStmt,
+        )?;
+
+        Ok(Stmt::PrintStmt(expr))
+    }
+
+    fn expr_statement<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        let expr = Self::expression(tokens)?;
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Semicolon),
+            ParserError::UnterminatedStmt,
+        )?;
+        Ok(Stmt::ExprStatement(expr))
     }
 
     fn expression<I: Iterator<Item = Token>>(
@@ -143,8 +212,28 @@ impl Parser {
         if let Some(op) =
             tokens.next_if(|t| matches!(t.token_type, TokenType::Not | TokenType::Minus))
         {
+            // For '- ;' expressions like this but eh, might remove
+            // if Self::check(tokens, |t| {
+            //     matches!(
+            //         t,
+            //         TokenType::LeftParenthesis
+            //             | TokenType::Minus
+            //             | TokenType::Not
+            //             | TokenType::True
+            //             | TokenType::False
+            //             | TokenType::Nil
+            //             | TokenType::Number(_)
+            //             | TokenType::String(_)
+            //     )
+            // })
+            // .is_some()
+            // {
             let expr_r = Self::unary(tokens)?;
             return Ok(Expr::unary(op.clone(), expr_r));
+            // }
+
+            // let pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
+            // return Err(Error::new(pos, ParserError::ExpectedExpr));
         }
 
         Self::primary(tokens)
@@ -153,66 +242,83 @@ impl Parser {
     fn primary<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
-        if tokens
-            .next_if(|t| matches!(t.token_type, TokenType::LeftParenthesis))
-            .is_some()
-        {
+        // Grouping Start
+        if Self::check(tokens, |t| matches!(t, TokenType::LeftParenthesis)).is_some() {
             let expr = Self::expression(tokens)?;
 
-            if tokens
-                .next_if(|t| matches!(t.token_type, TokenType::RightParenthesis))
-                .is_none()
-            {
-                // TODO: find position
-                // I have the line position in token, but i'm not consuming it here
-                // there's a way to do it by storing the values whenever I consume but
-                // fuckkkkkk that's stupid considering i'm doing it across multiple fuctions
-                let pos = match tokens.peek() {
-                    Some(t) => Pos::from(t.line), // Takes the next token's position...
-                    None => Pos::EOF,
-                };
+            let _ = Self::consume(
+                tokens,
+                |t| matches!(t, TokenType::RightParenthesis),
+                ParserError::UnclosedExpr,
+            )?;
 
-                return Err(Error::new(pos, ParserError::UnclosedGrouping));
-            }
             return Ok(Expr::grouping(expr));
-        } else if let Some(t) = tokens.next_if(|t| {
+        }
+
+        // Literal
+        if let Some(t) = Self::check(tokens, |t| {
             matches!(
-                t.token_type,
+                t,
                 TokenType::False
                     | TokenType::True
                     | TokenType::Nil
                     | TokenType::String(_)
-                    | TokenType::Number(_) // | TokenType::Identifier(_)
-                                           // | TokenType::ExposedFunction(_)
+                    | TokenType::Number(_)
             )
         }) {
             return Ok(Expr::literal(t));
         }
 
-        if let Some(t) = tokens.next() {
-            Err(Error::new(
+        // Neither Literal nor Grouping then Err
+        match tokens.peek() {
+            Some(t) => Err(Error::new(
                 Pos::from(t.line),
-                ParserError::InvalidToken(t.token_type),
-            ))
-        } else {
-            Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF))
+                ParserError::InvalidToken(t.token_type.clone()),
+            )),
+            None => Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF)),
         }
     }
 
     fn synchronize<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) {
-        while tokens.peek().is_some_and(|t| {
-            !matches!(
-                t.token_type,
-                TokenType::Semicolon
-                    | TokenType::Fun
-                    | TokenType::Return
-                    | TokenType::Let
-                    | TokenType::For
-                    | TokenType::While
-                    | TokenType::If
-            )
-        }) {
-            tokens.next();
+        while let Some(t) = tokens.peek() {
+            match t.token_type {
+                TokenType::Semicolon => {
+                    tokens.next();
+                    break;
+                }
+                TokenType::Fun
+                | TokenType::Return
+                | TokenType::Let
+                | TokenType::For
+                | TokenType::While
+                | TokenType::If => break,
+                _ => {
+                    tokens.next();
+                }
+            }
+        }
+    }
+
+    // Could be replaced with some abstraction that stores the current + tokens but eh... it works
+    fn consume<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+        expected: impl Fn(&TokenType) -> bool,
+        err: ParserError,
+    ) -> Result<Token, Error<ParserError>> {
+        match tokens.next() {
+            Some(t) if expected(&t.token_type) => Ok(t),
+            Some(t) => Err(Error::new(Pos::from(t.line), err)),
+            None => Err(Error::new(Pos::EOF, err)),
+        }
+    }
+
+    fn check<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+        expected: impl Fn(&TokenType) -> bool,
+    ) -> Option<Token> {
+        match tokens.peek() {
+            Some(t) if expected(&t.token_type) => tokens.next(),
+            _ => None,
         }
     }
 }
