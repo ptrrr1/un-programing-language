@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    errors::{Error, scanner_errors::ScannerError},
+    errors::{Error, Pos, scanner_errors::ScannerError},
     tokens::{Token, TokenType},
 };
 
@@ -20,21 +20,55 @@ enum States {
 }
 
 #[derive(Debug, Default)]
-pub struct Scanner {
+pub struct ScannerResult {
     errors: Vec<Error<ScannerError>>,
     tokens: Vec<Token>,
 }
 
-impl Scanner {
-    pub fn scan_file(&mut self, buffer: &mut BufReader<File>) {
-        for (pos_v, line_result) in buffer.lines().enumerate() {
-            let line: String = line_result.expect("Failed to read line");
-            self.scan_line(line, pos_v);
+impl ScannerResult {
+    fn append(&mut self, other: &mut Self) {
+        self.tokens.append(&mut other.tokens);
+        self.errors.append(&mut other.errors);
+    }
+
+    fn add_token(&mut self, pos: (usize, usize), literal: &str) {
+        if let Some(token) = Scanner::scan_token(literal) {
+            self.tokens.push(Token::new(token, pos));
+        } else {
+            self.errors.push(Error::new(
+                Pos::from(pos),
+                ScannerError::InvalidToken(literal.to_string()),
+            ));
         }
     }
 
-    // TODO: Return -> { tokens: Vec<Token>, err: Vec<Error<ScannerError>> }
-    pub fn scan_line(&mut self, line: String, pos_v: usize) {
+    pub fn into_tokens(self) -> Vec<Token> {
+        self.tokens
+    }
+
+    pub fn has_err(self) -> bool {
+        !self.errors.is_empty()
+    }
+}
+
+#[derive(Debug)]
+pub struct Scanner;
+
+impl Scanner {
+    pub fn scan_file(buffer: &mut BufReader<File>) -> ScannerResult {
+        let mut scanner_result = ScannerResult::default();
+
+        for (pos_v, line_result) in buffer.lines().enumerate() {
+            let line: String = line_result.expect("Failed to read line");
+            scanner_result.append(&mut Self::scan_line(line, pos_v));
+        }
+
+        scanner_result
+    }
+
+    pub fn scan_line(line: String, pos_v: usize) -> ScannerResult {
+        let mut scanner_result = ScannerResult::default();
+
         let mut chars = line.chars().enumerate().peekable();
         let mut literal = String::new();
 
@@ -57,17 +91,17 @@ impl Scanner {
                                 continue;
                             }
                             Some((_, c)) if c.is_ascii_alphabetic() => {
-                                self.add_token((pos_v, pos_h), &literal);
+                                scanner_result.add_token((pos_v, pos_h), &literal);
                                 literal.clear();
                                 state = States::Start;
 
-                                self.errors.push(Error::new(
-                                    (pos_v, pos_h),
+                                scanner_result.errors.push(Error::new(
+                                    Pos::Known(pos_v, pos_h),
                                     ScannerError::MissingWhitespace,
                                 ));
                             }
                             _ => {
-                                self.add_token((pos_v, pos_h), &literal);
+                                scanner_result.add_token((pos_v, pos_h), &literal);
                                 literal.clear();
                             }
                         }
@@ -80,7 +114,7 @@ impl Scanner {
                             continue;
                         }
 
-                        self.add_token((pos_v, pos_h), &literal);
+                        scanner_result.add_token((pos_v, pos_h), &literal);
                         literal.clear();
                     }
                     '"' => {
@@ -102,7 +136,7 @@ impl Scanner {
                             continue;
                         }
 
-                        self.add_token((pos_v, pos_h), &literal);
+                        scanner_result.add_token((pos_v, pos_h), &literal);
                         literal.clear();
                     }
                 },
@@ -114,14 +148,14 @@ impl Scanner {
                             Some((_, c)) if c.is_ascii_digit() && !seen_dot => literal.push(char),
                             Some((_, c)) if c.is_ascii_digit() && seen_dot => continue,
                             Some((_, c)) if *c == '.' => {
-                                self.add_token((pos_v, pos_h - 1), &literal);
+                                scanner_result.add_token((pos_v, pos_h - 1), &literal);
                                 literal.clear();
                                 literal.push(char); // Reprocess it, expecting TokenType::DotDot
                                 state = States::Start;
                             }
                             _ => {
-                                self.add_token((pos_v, pos_h - 1), &literal);
-                                self.add_token((pos_v, pos_h), &char.to_string());
+                                scanner_result.add_token((pos_v, pos_h - 1), &literal);
+                                scanner_result.add_token((pos_v, pos_h), &char.to_string());
                                 literal.clear();
                                 state = States::Start;
                             }
@@ -136,8 +170,8 @@ impl Scanner {
                             Some((_, c)) if c.is_ascii_digit() => continue,
                             Some((_, c)) if *c == '.' && !seen_dot => continue,
                             Some((_, c)) if *c == '.' && seen_dot => {
-                                self.errors.push(Error::new(
-                                    (pos_v, pos_h),
+                                scanner_result.errors.push(Error::new(
+                                    Pos::Known(pos_v, pos_h),
                                     ScannerError::MultipleDecimalDivider,
                                 ));
 
@@ -145,15 +179,15 @@ impl Scanner {
                             }
                             Some((_, c)) if c.is_ascii_alphabetic() => {
                                 // Consume token
-                                self.errors.push(Error::new(
-                                    (pos_v, pos_h),
+                                scanner_result.errors.push(Error::new(
+                                    Pos::Known(pos_v, pos_h),
                                     ScannerError::MissingWhitespace,
                                 ));
                             }
                             _ => {} // Consume token
                         }
 
-                        self.add_token((pos_v, pos_h), &literal);
+                        scanner_result.add_token((pos_v, pos_h), &literal);
                         literal.clear();
                         state = States::Start;
                     }
@@ -164,13 +198,15 @@ impl Scanner {
                     '"' => {
                         literal.push(char);
 
-                        self.add_token((pos_v, pos_h), &literal);
+                        scanner_result.add_token((pos_v, pos_h), &literal);
                         literal.clear();
                         state = States::Start;
                     }
                     _ if chars.peek().is_none() => {
-                        self.errors
-                            .push(Error::new((pos_v, pos_h), ScannerError::UnclosedString));
+                        scanner_result.errors.push(Error::new(
+                            Pos::Known(pos_v, pos_h),
+                            ScannerError::UnclosedString,
+                        ));
                     } // error
                     _ => literal.push(char),
                 },
@@ -183,7 +219,7 @@ impl Scanner {
                             continue;
                         }
 
-                        self.add_token((pos_v, pos_h), &literal);
+                        scanner_result.add_token((pos_v, pos_h), &literal);
                         literal.clear();
                         state = States::Start;
                     }
@@ -196,7 +232,9 @@ impl Scanner {
                         literal.push(char);
 
                         if let Some(token) = Scanner::scan_token(&literal) {
-                            self.tokens.push(Token::new(token, (pos_v, pos_h)));
+                            scanner_result
+                                .tokens
+                                .push(Token::new(token, (pos_v, pos_h)));
                             literal.clear();
                         }
                     }
@@ -204,7 +242,7 @@ impl Scanner {
                     _ if chars.peek().is_none() => {
                         literal.push(char);
 
-                        self.tokens.push(Token::new(
+                        scanner_result.tokens.push(Token::new(
                             TokenType::Comment(literal.to_owned()),
                             (pos_v, pos_h),
                         ));
@@ -216,6 +254,8 @@ impl Scanner {
                 },
             }
         }
+
+        scanner_result
     }
 
     fn scan_token(literal: &str) -> Option<TokenType> {
@@ -271,14 +311,14 @@ impl Scanner {
                 Some(TokenType::String(literal.trim_matches('"').to_string()))
             }
             _ if literal.chars().all(|c| c.is_ascii_digit()) => {
-                Some(TokenType::NumberInt(literal.parse::<i32>().unwrap()))
+                Some(TokenType::Number(literal.parse::<f64>().unwrap()))
             }
             _ if !literal.starts_with('-')
                 && literal.ends_with(|c: char| c.is_ascii_digit())
                 && literal.starts_with(|c: char| c.is_ascii_digit())
                 && literal.contains('.') =>
             {
-                Some(TokenType::NumberFloat(literal.parse::<f32>().unwrap()))
+                Some(TokenType::Number(literal.parse::<f64>().unwrap()))
             }
             _ if literal.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
                 && literal
@@ -303,26 +343,5 @@ impl Scanner {
         }
 
         None
-    }
-
-    fn add_token(&mut self, pos: (usize, usize), literal: &str) {
-        if let Some(token) = Scanner::scan_token(literal) {
-            self.tokens.push(Token::new(token, pos));
-        } else {
-            self.errors.push(Error::new(
-                pos,
-                ScannerError::InvalidToken(literal.to_string()),
-            ));
-        }
-    }
-
-    pub fn into_errors(self) -> Vec<Error<ScannerError>> {
-        self.errors
-    }
-
-    // TODO: pub fn has_error
-
-    pub fn into_tokens(self) -> Vec<Token> {
-        self.tokens
     }
 }

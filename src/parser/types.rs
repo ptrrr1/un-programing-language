@@ -1,7 +1,11 @@
+use core::fmt;
+use std::fmt::Display;
+
+use crate::tokens::TokenType;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Types {
     Bool,
-    Int,
     Float,
     String,
     Nil,
@@ -10,8 +14,7 @@ pub enum Types {
 #[derive(Debug, Clone)]
 pub enum TValues {
     Bool(bool),
-    Int(i32),
-    Float(f32),
+    Float(f64),
     String(String),
     Nil,
 }
@@ -20,7 +23,6 @@ impl TValues {
     pub fn as_type(self) -> Types {
         match self {
             TValues::Bool(_) => Types::Bool,
-            TValues::Int(_) => Types::Int,
             TValues::Float(_) => Types::Float,
             TValues::String(_) => Types::String,
             TValues::Nil => Types::Nil,
@@ -32,16 +34,11 @@ impl PartialEq for TValues {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (TValues::Bool(l), TValues::Bool(r)) => l == r,
-            (TValues::Int(l), TValues::Int(r)) => l == r,
             (TValues::Float(l), TValues::Float(r)) => l == r,
             (TValues::String(l), TValues::String(r)) => l == r,
             (TValues::Nil, TValues::Nil) => true,
             _ => false,
         }
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
     }
 }
 
@@ -51,7 +48,6 @@ impl PartialOrd for TValues {
 
         match (self, other) {
             (TValues::Bool(l), TValues::Bool(r)) => l.partial_cmp(r),
-            (TValues::Int(l), TValues::Int(r)) => l.partial_cmp(r),
             (TValues::Float(l), TValues::Float(r)) => l.partial_cmp(r),
             (TValues::String(l), TValues::String(r)) => l.partial_cmp(r),
             (TValues::Nil, TValues::Nil) => Some(Ordering::Equal),
@@ -60,36 +56,38 @@ impl PartialOrd for TValues {
     }
 }
 
-impl ToString for TValues {
-    fn to_string(&self) -> String {
+impl Display for TValues {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TValues::Bool(v) => v.to_string(),
-            TValues::Int(v) => v.to_string(),
-            TValues::Float(v) => v.to_string(),
-            TValues::String(v) => v.clone(), // TODO: Remove this clone
-            TValues::Nil => "Nil".to_string(),
+            TValues::Bool(v) => write!(f, "{v}"),
+            TValues::Float(v) => write!(f, "{v}"),
+            TValues::String(v) => write!(f, "{v}"),
+            TValues::Nil => write!(f, "Nil"),
         }
     }
 }
 
-impl TryFrom<TValues> for f32 {
+impl TryFrom<TValues> for f64 {
     type Error = &'static str;
 
     fn try_from(value: TValues) -> Result<Self, Self::Error> {
         match value {
-            TValues::Int(v) => Ok(v as f32),
             TValues::Float(v) => Ok(v),
             _ => Err("Failed to convert"),
         }
     }
 }
 
-impl TryFrom<TValues> for i32 {
+impl TryFrom<TokenType> for TValues {
     type Error = &'static str;
 
-    fn try_from(value: TValues) -> Result<Self, Self::Error> {
+    fn try_from(value: TokenType) -> Result<Self, Self::Error> {
         match value {
-            TValues::Int(v) => Ok(v),
+            TokenType::True => Ok(TValues::Bool(true)),
+            TokenType::False => Ok(TValues::Bool(false)),
+            TokenType::Number(v) => Ok(TValues::Float(v)),
+            TokenType::String(v) => Ok(TValues::String(v)),
+            TokenType::Nil => Ok(TValues::Nil),
             _ => Err("Failed to convert"),
         }
     }

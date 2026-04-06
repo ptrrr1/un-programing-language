@@ -20,7 +20,7 @@ use std::iter::Peekable;
 use expr::Expr;
 
 use crate::{
-    errors::{Error, parser_errors::ParserError},
+    errors::{Error, Pos, parser_errors::ParserError},
     tokens::{Token, TokenType},
 };
 
@@ -28,61 +28,70 @@ pub mod expr;
 pub mod typed_expr;
 pub mod types;
 
-#[derive(Debug)]
-pub struct Parser<I: Iterator<Item = Token>> {
-    tokens: Peekable<I>,
+#[derive(Debug, Default)]
+pub struct ParserResult {
     errors: Vec<Error<ParserError>>,
     expr: Vec<Expr>,
-    // need_sync: bool,
 }
 
-impl<I: Iterator<Item = Token>> Parser<I> {
-    pub fn new(tokens: I) -> Parser<I> {
-        Parser {
-            tokens: tokens.peekable(),
-            errors: vec![],
-            expr: vec![],
-            // need_sync: false,
+impl ParserResult {
+    pub fn into_expr(self) -> Vec<Expr> {
+        self.expr
+    }
+
+    pub fn has_err(self) -> bool {
+        !self.errors.is_empty()
+    }
+}
+
+#[derive(Debug)]
+pub struct Parser;
+
+impl Parser {
+    pub fn parse_tokens<I: Iterator<Item = Token>>(tokens: I) -> ParserResult {
+        let mut parser_result = ParserResult::default();
+
+        let mut t = tokens.peekable();
+        while t.peek().is_some() {
+            match Self::expression(&mut t) {
+                Ok(expr) => parser_result.expr.push(expr),
+                Err(e) => {
+                    parser_result.errors.push(e);
+                    Self::synchronize(&mut t);
+                }
+            }
         }
+
+        parser_result
     }
 
-    // TODO: change signature, receive a list of tokens and return { expr: Vec<Expr>, err: Vec<Err>  }
-    pub fn parse_tokens(&mut self) {
-        while self.tokens.peek().is_some() {
-            // TODO: After adding result, synchronize if err
-            // if self.need_sync {
-            //     self.synchronize();
-            //     self.need_sync = false;
-            // }
-
-            let expr = self.expression();
-            self.expr.push(expr);
-        }
+    fn expression<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        Self::equality(tokens)
     }
 
-    // TODO: Alter Return, Add Result<Expr, Err>
-    fn expression(&mut self) -> Expr {
-        self.equality()
-    }
+    fn equality<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        let mut expr = Self::comparison(tokens)?;
 
-    fn equality(&mut self) -> Expr {
-        let mut expr = self.comparison();
-
-        while let Some(op) = self
-            .tokens
-            .next_if(|t| matches!(t.token_type, TokenType::BangEqual | TokenType::EqualEqual))
+        while let Some(op) =
+            tokens.next_if(|t| matches!(t.token_type, TokenType::BangEqual | TokenType::EqualEqual))
         {
-            let expr_r = self.comparison();
+            let expr_r = Self::comparison(tokens)?;
             expr = Expr::binary(expr, op.clone(), expr_r);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparison<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        let mut expr = Self::term(tokens)?;
 
-        while let Some(op) = self.tokens.next_if(|t| {
+        while let Some(op) = tokens.next_if(|t| {
             matches!(
                 t.token_type,
                 TokenType::Lesser
@@ -91,63 +100,66 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                     | TokenType::GreaterEqual
             )
         }) {
-            let expr_r = self.term();
+            let expr_r = Self::term(tokens)?;
             expr = Expr::binary(expr, op.clone(), expr_r);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        let mut expr = Self::factor(tokens)?;
 
-        while let Some(op) = self
-            .tokens
-            .next_if(|t| matches!(t.token_type, TokenType::Minus | TokenType::Plus))
+        while let Some(op) =
+            tokens.next_if(|t| matches!(t.token_type, TokenType::Minus | TokenType::Plus))
         {
-            let expr_r = self.factor();
+            let expr_r = Self::factor(tokens)?;
             expr = Expr::binary(expr, op.clone(), expr_r);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        let mut expr = Self::unary(tokens)?;
 
-        while let Some(op) = self
-            .tokens
-            .next_if(|t| matches!(t.token_type, TokenType::Slash | TokenType::Star))
+        while let Some(op) =
+            tokens.next_if(|t| matches!(t.token_type, TokenType::Slash | TokenType::Star))
         {
-            let expr_r = self.unary();
+            let expr_r = Self::unary(tokens)?;
             expr = Expr::binary(expr, op.clone(), expr_r);
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Expr {
-        if let Some(op) = self
-            .tokens
-            .next_if(|t| matches!(t.token_type, TokenType::Not | TokenType::Minus))
+    fn unary<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        if let Some(op) =
+            tokens.next_if(|t| matches!(t.token_type, TokenType::Not | TokenType::Minus))
         {
-            let expr_r = self.unary();
-            return Expr::unary(op.clone(), expr_r);
+            let expr_r = Self::unary(tokens)?;
+            return Ok(Expr::unary(op.clone(), expr_r));
         }
 
-        self.primary()
+        Self::primary(tokens)
     }
 
-    fn primary(&mut self) -> Expr {
-        if self
-            .tokens
+    fn primary<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        if tokens
             .next_if(|t| matches!(t.token_type, TokenType::LeftParenthesis))
             .is_some()
         {
-            let expr = self.expression();
-            // TODO: change into a match, that'll allow me to have the position value of err
-            if self
-                .tokens
+            let expr = Self::expression(tokens)?;
+
+            if tokens
                 .next_if(|t| matches!(t.token_type, TokenType::RightParenthesis))
                 .is_none()
             {
@@ -155,53 +167,40 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                 // I have the line position in token, but i'm not consuming it here
                 // there's a way to do it by storing the values whenever I consume but
                 // fuckkkkkk that's stupid considering i'm doing it across multiple fuctions
-                let pos = match self.tokens.peek() {
-                    Some(t) => t.line, // Takes the next token's position...
-                    None => (usize::MAX, usize::MIN),
+                let pos = match tokens.peek() {
+                    Some(t) => Pos::from(t.line), // Takes the next token's position...
+                    None => Pos::EOF,
                 };
 
-                self.errors
-                    .push(Error::new(pos, ParserError::UnclosedGrouping));
+                return Err(Error::new(pos, ParserError::UnclosedGrouping));
             }
-            return Expr::grouping(expr);
-        } else if let Some(t) = self.tokens.next_if(|t| {
+            return Ok(Expr::grouping(expr));
+        } else if let Some(t) = tokens.next_if(|t| {
             matches!(
                 t.token_type,
                 TokenType::False
                     | TokenType::True
                     | TokenType::Nil
                     | TokenType::String(_)
-                    | TokenType::NumberInt(_)
-                    | TokenType::NumberFloat(_) // | TokenType::Identifier(_)
-                                                // | TokenType::ExposedFunction(_)
+                    | TokenType::Number(_) // | TokenType::Identifier(_)
+                                           // | TokenType::ExposedFunction(_)
             )
         }) {
-            return Expr::literal(t);
+            return Ok(Expr::literal(t));
         }
 
-        // TODO: Return Err
-
-        // If not literal or grouping then error
-        // self.need_sync = true;
-        if let Some(t) = self.tokens.next() {
-            // More accurate to say: expected expression
-            self.errors
-                .push(Error::new(t.line, ParserError::InvalidToken(t.token_type)));
+        if let Some(t) = tokens.next() {
+            Err(Error::new(
+                Pos::from(t.line),
+                ParserError::InvalidToken(t.token_type),
+            ))
         } else {
-            self.errors.push(Error::new(
-                (usize::MAX, usize::MIN),
-                ParserError::UnexpectedEOF,
-            ));
+            Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF))
         }
-
-        // TODO: This is clearly wrong... but idk what to do
-        //  1 ++ 2 becomes -> binary(1, +, 2)
-        // 1.++ 2 becomes -> literal(1), literal(1)
-        self.expression()
     }
 
-    fn synchronize(&mut self) {
-        while self.tokens.peek().is_some_and(|t| {
+    fn synchronize<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) {
+        while tokens.peek().is_some_and(|t| {
             !matches!(
                 t.token_type,
                 TokenType::Semicolon
@@ -213,13 +212,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                     | TokenType::If
             )
         }) {
-            self.tokens.next();
+            tokens.next();
         }
     }
-
-    pub fn into_expr(self) -> Vec<Expr> {
-        self.expr
-    }
-
-    // TODO: add has_err
 }

@@ -30,11 +30,20 @@ pub enum TokenType {
     DotDot,         // .. for [n..m;s]
 
     // Literals
-    Identifier(String),      // TODO: Change to str
-    ExposedFunction(String), // TODO: Change to str '@func'
-    String(String),          // TODO: Change to str
-    NumberInt(i32),          // TODO: Condense both into Number
-    NumberFloat(f32),
+    // If I understood correctly, this should be static because
+    // It will live till the end of the program or be coerced to end before
+    // Otherwise I should use Box<str>
+    // I'm also changing from String to str because
+    // 1. They don't get changed
+    // 2. I don't need to clone as much since it has copy
+    // ...
+    // Changing it failed (maybe i'm stoopid) but since I don't own
+    // the String i'm using to generate the tokens during Scanning then
+    // I can't make sure that it will live till the end of the program
+    Identifier(String),
+    ExposedFunction(String),
+    String(String),
+    Number(f64),
 
     // TODO: Add type keywords: string, number and bool
     // Keywords
@@ -69,6 +78,10 @@ pub struct Token {
 impl Token {
     pub fn new(token_type: TokenType, line: (usize, usize)) -> Self {
         Token { token_type, line }
+    }
+
+    pub fn as_token_type(self) -> TokenType {
+        self.token_type
     }
 }
 

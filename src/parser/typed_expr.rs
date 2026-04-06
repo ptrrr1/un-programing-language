@@ -63,35 +63,27 @@ impl TypedExpr {
                         TokenType::GreaterEqual => TValues::Bool(l >= r),
                         _ => unreachable!(),
                     },
-                    Types::Int => match operator.token_type {
-                        TokenType::Plus => {
-                            TValues::Int(i32::try_from(l).unwrap() + i32::try_from(r).unwrap())
-                        }
-                        TokenType::Minus => {
-                            TValues::Int(i32::try_from(l).unwrap() - i32::try_from(r).unwrap())
-                        }
-                        TokenType::Star => {
-                            TValues::Int(i32::try_from(l).unwrap() * i32::try_from(r).unwrap())
-                        }
-                        _ => unreachable!(),
-                    },
                     Types::Float => match operator.token_type {
                         TokenType::Plus => {
-                            TValues::Float(f32::try_from(l).unwrap() + f32::try_from(r).unwrap())
+                            TValues::Float(f64::try_from(l).unwrap() + f64::try_from(r).unwrap())
                         }
                         TokenType::Minus => {
-                            TValues::Float(f32::try_from(l).unwrap() - f32::try_from(r).unwrap())
+                            TValues::Float(f64::try_from(l).unwrap() - f64::try_from(r).unwrap())
                         }
                         TokenType::Slash => {
-                            TValues::Float(f32::try_from(l).unwrap() / f32::try_from(r).unwrap())
+                            TValues::Float(f64::try_from(l).unwrap() / f64::try_from(r).unwrap())
                         }
                         TokenType::Star => {
-                            TValues::Float(f32::try_from(l).unwrap() * f32::try_from(r).unwrap())
+                            TValues::Float(f64::try_from(l).unwrap() * f64::try_from(r).unwrap())
                         }
                         _ => unreachable!(),
                     },
                     // Only one operation is possible with Strings
-                    Types::String => TValues::String(format!("{}{}", l.to_string(), r.to_string())),
+                    Types::String => {
+                        let mut s = l.to_string();
+                        s.push_str(&r.to_string());
+                        TValues::String(s)
+                    }
                     Types::Nil => unreachable!(),
                 }
             }
@@ -102,7 +94,6 @@ impl TypedExpr {
 
                 match operator.token_type {
                     TokenType::Minus => match r {
-                        TValues::Int(v) => TValues::Int(-v),
                         TValues::Float(v) => TValues::Float(-v),
                         _ => unreachable!(),
                     },
@@ -111,9 +102,7 @@ impl TypedExpr {
                     // Ideally: 0 and "" (empty string) are falsy
                     TokenType::Not => match r {
                         TValues::Bool(v) => TValues::Bool(!v),
-                        TValues::Int(_) | TValues::Float(_) | TValues::String(_) => {
-                            TValues::Bool(false)
-                        }
+                        TValues::Float(_) | TValues::String(_) => TValues::Bool(false),
                         TValues::Nil => TValues::Bool(true),
                     },
                     _ => unreachable!(),
@@ -131,17 +120,8 @@ impl TryFrom<Expr> for TypedExpr {
     fn try_from(expr: Expr) -> Result<Self, TypeError> {
         match expr {
             Expr::Literal(token) => {
-                // TODO: Impl TryFrom<Token> to TVal
-                let typed_value = match token.token_type {
-                    TokenType::True => TValues::Bool(true),
-                    TokenType::False => TValues::Bool(false),
-                    TokenType::NumberInt(v) => TValues::Int(v),
-                    TokenType::NumberFloat(v) => TValues::Float(v),
-                    TokenType::String(v) => TValues::String(v),
-                    TokenType::Nil => TValues::Nil,
-                    // TODO: Missing identifier and ExposedFunction
-                    _ => unreachable!(),
-                };
+                // Can just unwrap since I know what the expected value is
+                let typed_value = TValues::try_from(token.token_type).unwrap();
 
                 Ok(TypedExpr::Literal(TypedValue {
                     line: token.line,
@@ -160,12 +140,10 @@ impl TryFrom<Expr> for TypedExpr {
                 let r = TypedExpr::try_from(*right)?;
 
                 let t = match operator.token_type {
-                    TokenType::Minus => {
-                        match r.get_type() {
-                            Types::Int | Types::Float => r.get_type(),
-                            _ => return Err(TypeError::Mismatch), // TODO: add message for expected an found
-                        }
-                    }
+                    TokenType::Minus => match r.get_type() {
+                        Types::Float => r.get_type(),
+                        _ => return Err(TypeError::Mismatch),
+                    },
                     TokenType::Not => Types::Bool,
                     _ => unreachable!(),
                 };
@@ -192,26 +170,15 @@ impl TryFrom<Expr> for TypedExpr {
                     | TokenType::EqualEqual
                     | TokenType::BangEqual => Types::Bool,
                     TokenType::Minus | TokenType::Slash | TokenType::Star => {
-                        if !matches!(l.get_type(), Types::Int | Types::Float)
-                            || !matches!(r.get_type(), Types::Int | Types::Float)
-                        {
+                        if !matches!((l.get_type(), r.get_type()), (Types::Float, Types::Float)) {
                             return Err(TypeError::Mismatch);
                         }
 
-                        if matches!(l.get_type(), Types::Int)
-                            && matches!(r.get_type(), Types::Int)
-                            && !matches!(operator.token_type, TokenType::Slash)
-                        {
-                            Types::Int
-                        } else {
-                            Types::Float
-                        }
+                        Types::Float
                     }
-                    TokenType::Plus => match l.get_type() {
-                        Types::Int if matches!(r.get_type(), Types::Int) => Types::Int,
-                        Types::Int if matches!(r.get_type(), Types::Float) => Types::Float,
-                        Types::Float => Types::Float,
-                        Types::String if matches!(r.get_type(), Types::String) => Types::String,
+                    TokenType::Plus => match (l.get_type(), r.get_type()) {
+                        (Types::Float, Types::Float) => Types::Float,
+                        (Types::String, Types::String) => Types::String,
                         _ => return Err(TypeError::Mismatch),
                     },
                     _ => unreachable!(),

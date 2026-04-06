@@ -26,22 +26,18 @@ fn main() -> io::Result<()> {
                 exit(66);
             });
 
-            let mut scanner = Scanner::default();
-            scanner.scan_file(&mut buffer);
-
+            let scanner_result = Scanner::scan_file(&mut buffer);
             //dbg!(&scanner);
 
-            let tokens = scanner
+            let tokens = scanner_result
                 .into_tokens() // Destroys Scanner
                 .into_iter()
                 .filter(|t| !matches!(t.token_type, TokenType::Space));
 
-            let mut parser = Parser::new(tokens);
-            parser.parse_tokens();
-
+            let parser_result = Parser::parse_tokens(tokens);
             //dbg!(&parser);
 
-            let expr = parser.into_expr();
+            let expr = parser_result.into_expr();
 
             let i = expr.iter().map(|expr| TypedExpr::try_from(expr.clone()));
             i.for_each(|v| println!("{:#?}", v.is_ok().then(|| v.unwrap().eval())));
@@ -85,21 +81,18 @@ fn run_prompt() -> io::Result<()> {
                 if s == 1 {
                     break;
                 } else {
-                    let mut scanner = Scanner::default();
-                    scanner.scan_line(buf, 0);
-                    // println!(":: {:#?}", &scanner);
+                    let scanner_result = Scanner::scan_line(buf, 0);
 
-                    let tokens = scanner
+                    let tokens = scanner_result
                         .into_tokens()
                         .into_iter()
                         .filter(|t| !matches!(t.token_type, TokenType::Space));
                     // println!(":: {:#?}", &tokens);
 
-                    let mut parser = Parser::new(tokens);
-                    parser.parse_tokens();
+                    let parser_result = Parser::parse_tokens(tokens);
                     // println!(":: {:#?}", &parser);
 
-                    let expr = parser.into_expr().pop().unwrap();
+                    let expr = parser_result.into_expr().pop().unwrap();
                     // println!(":: {:#?}", &expr);
 
                     let typed_expr = TypedExpr::try_from(expr);
