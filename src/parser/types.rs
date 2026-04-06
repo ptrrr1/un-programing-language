@@ -28,6 +28,15 @@ impl TValues {
             TValues::Nil => Types::Nil,
         }
     }
+
+    pub fn get_truthyness(self) -> bool {
+        match self {
+            TValues::Bool(v) => v,
+            TValues::Float(v) => !(v == 0.0),
+            TValues::String(v) => !v.is_empty(),
+            TValues::Nil => false,
+        }
+    }
 }
 
 impl PartialEq for TValues {

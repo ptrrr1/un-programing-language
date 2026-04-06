@@ -97,12 +97,12 @@ impl TypedExpr {
                         TValues::Float(v) => TValues::Float(-v),
                         _ => unreachable!(),
                     },
-                    // TODO: Decide if i want this configuration:
-                    // everything is truthy except for Nil and False
-                    // Ideally: 0 and "" (empty string) are falsy
+                    // Nil, False, Empty String and 0.0 ARE FALSY
                     TokenType::Not => match r {
                         TValues::Bool(v) => TValues::Bool(!v),
-                        TValues::Float(_) | TValues::String(_) => TValues::Bool(false),
+                        TValues::Float(_) | TValues::String(_) => {
+                            TValues::Bool(!r.get_truthyness())
+                        }
                         TValues::Nil => TValues::Bool(true),
                     },
                     _ => unreachable!(),
