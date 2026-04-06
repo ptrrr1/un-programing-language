@@ -180,7 +180,10 @@ impl TryFrom<Expr> for TypedExpr {
                     TokenType::Minus | TokenType::Slash | TokenType::Star => {
                         if !matches!((l.get_type(), r.get_type()), (Types::Float, Types::Float)) {
                             return Err(TypeError::Mismatch {
-                                expected: MismatchType::Single(vec![Types::Float]),
+                                expected: MismatchType::Multiple(vec![(
+                                    Types::Float,
+                                    Types::Float,
+                                )]),
                                 found: MismatchType::Multiple(vec![(l.get_type(), r.get_type())]),
                             });
                         }
