@@ -1,10 +1,13 @@
 use crate::{
-    errors::typed_parser_errors::TypeError,
+    errors::typed_parser_errors::{MismatchType, TypeError},
     parser::types::{TValues, Types},
     tokens::{Token, TokenType},
 };
 
 use super::expr::Expr;
+
+// TODO: TypedExprResult
+// Also It seems I'm losing position information (or at least not preserving)
 
 #[derive(Debug, Clone)]
 pub struct TypedValue {
@@ -142,7 +145,12 @@ impl TryFrom<Expr> for TypedExpr {
                 let t = match operator.token_type {
                     TokenType::Minus => match r.get_type() {
                         Types::Float => r.get_type(),
-                        _ => return Err(TypeError::Mismatch),
+                        _ => {
+                            return Err(TypeError::Mismatch {
+                                expected: MismatchType::Single(vec![Types::Float]),
+                                found: MismatchType::Single(vec![r.get_type()]),
+                            });
+                        }
                     },
                     TokenType::Not => Types::Bool,
                     _ => unreachable!(),
@@ -171,7 +179,10 @@ impl TryFrom<Expr> for TypedExpr {
                     | TokenType::BangEqual => Types::Bool,
                     TokenType::Minus | TokenType::Slash | TokenType::Star => {
                         if !matches!((l.get_type(), r.get_type()), (Types::Float, Types::Float)) {
-                            return Err(TypeError::Mismatch);
+                            return Err(TypeError::Mismatch {
+                                expected: MismatchType::Single(vec![Types::Float]),
+                                found: MismatchType::Multiple(vec![(l.get_type(), r.get_type())]),
+                            });
                         }
 
                         Types::Float
@@ -179,7 +190,15 @@ impl TryFrom<Expr> for TypedExpr {
                     TokenType::Plus => match (l.get_type(), r.get_type()) {
                         (Types::Float, Types::Float) => Types::Float,
                         (Types::String, Types::String) => Types::String,
-                        _ => return Err(TypeError::Mismatch),
+                        _ => {
+                            return Err(TypeError::Mismatch {
+                                expected: MismatchType::Multiple(vec![
+                                    (Types::Float, Types::Float),
+                                    (Types::String, Types::String),
+                                ]),
+                                found: MismatchType::Multiple(vec![(l.get_type(), r.get_type())]),
+                            });
+                        }
                     },
                     _ => unreachable!(),
                 };

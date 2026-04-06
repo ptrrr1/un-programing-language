@@ -14,7 +14,7 @@ Booleans Literals
 - `true` 
 - `false`
 
-Int and Float
+Int and Float as Number
 
 - Only decimal
 - '.' for decimal separation
@@ -26,6 +26,14 @@ Strings
 Nil
 
 - `nil`, though I would like to make it strongly typed without requiring null values I don't know how yet
+
+Arrays?
+
+- Implemented as Vec
+- Holds only one type
+- Needs many methods
+  - Push and Pop
+  - Insert at and Remove at
 
 ## Expressions
 
