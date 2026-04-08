@@ -1,0 +1,153 @@
+// Unnamed Language Example Code
+//
+// Statically Typed (Or at least that's the goal)
+// Garbage collected
+// Very heavily influenced by Lox from Crafting Interpreters by Robert Nystrom
+
+// This is a comment
+// This is a variable assignment
+let a := 2;
+let b := a + 2;
+
+// Variables are mutable
+// NOTE: I would like to make them immutable
+a := a + 2;
+
+// These are the data types:
+let bool := true; // Or 'false'
+let string := "The quick brown fox jumps over the lazy dog";
+let number := 12.34; // Int and Float are the same type
+let _nil := nil; // Good old nil
+let arr := [1, 2]; // A Number Array
+// NOTE: I haven't read about the array implementation in Lox yet
+// I do want to add them though
+// Addedum: With the Ideas at the end of the book, Arrays are a type that
+// Would work like Array<Type>. I'll even try to get nesting working!
+
+// Arithmetic
+let add := a + b;
+let sub := a - b;
+let mult := a * b;
+let divide := a / b;
+let neg := -a;
+
+// Comparison has the usual operators: >, >=, <, <=
+// So does Equality: ==, !=
+
+// Different type variables always evaluate to false in Equality
+// Comparison between different types are Err
+
+1 == "abc"; // False
+//1 <= "abc"; // Err
+
+// Some values are Falsy:
+let falsy_num := 0;
+let falsy_string := "";
+let falsy := nil;
+
+// Comparison functions different per Type
+1 <= 2; // True, as expected
+"abc" <= "def"; // True, uses lexicographic sort
+false <= true; // True, follows rust's (implementation language) rule
+
+// There are also logical operators:
+let _not := not a;
+let _and := a and b; // Returns b when True, a when False
+let _or := a or b; // Returns a when True, b when False
+
+// Statements!
+// Following what I learned from Crafting Interpreters,
+// Expressions produce values and Statements produce effects!
+// Note: variable declaration is a statement... I think...
+
+print(a); // Print statement, baked into the language!
+
+// Control flow
+// Useful when branching and looping!
+
+if (condition) { // NOTE: Later on I want to make a language wihout braces
+	... // Lots of statements and expressions
+} else {
+	... // Lots more
+}
+
+while (condition) {
+	... // A tad more code
+}
+
+// For loops use a unique syntax
+// [i..k;s] Reads as follows:
+// Starting at i, add s until i >= k
+// TODO: Define bahavior when numbers aren't Int
+// TODO: Evaluate if loop will run infinitely and throw err
+// Should be easy taking into account s and k - i
+
+for [i..k;s] {
+	... // Some more, but counted
+}
+
+// FUNCTIONS!
+// This is meant as a scripting language (and learning as well)
+// As such, there are two types of functions: User-defined and Exposed
+
+// User-defined
+fun name_here(v1, v2, ..., vn) { // -> Return Type ... Is what I would say if it had it
+	... // Code
+}
+
+// using...
+name_here(a, b, ..., z); // NOTE: They might be first-class...
+
+// Exposed
+// Exposed functions can only receive and/or return values
+
+@name_here(a, b, ..., z); // Note the prefix '@'
+
+// NOTE: Maybe closures? I need to finish the book first...
+
+// Future Ideas? (At least beyond the book)
+
+// Lox is OOP and therefore adds classes, I don't feel like doing that
+// I will have to work through some stuff to get there but it should be mostly C-like
+
+// We get a struct... Or so I hope to implement
+
+struct struct_name {
+	fields... // If Statically Typed add Type keyword here like: 'name: Type;'
+}
+
+// And functions defined for it
+
+fun struct_name::function_name(bla, blabla, ...) {
+	// Do stuff, alter values
+	self.field_name := 2;
+}
+
+// NOTE: With side-effects being a concern, I would like to limit access edit access
+// to fields through something like:
+//
+// fun struct_name::function_name(editable_field, ...)
+//
+// Other fields would still be readable, but changing them is not
+
+// Using it is easy, just do:
+variable_name::function_name(a, b, ...);
+
+// And enums...
+
+enum name {
+	foo,
+	bar,
+	you_know_the_drill
+}
+
+// Unlike rust, the are simple data types and only hold variations
+// Used like:
+
+name::foo;
+
+// Equality is only valid if they are the same (duh...)
+// Comparison uses the defined order
+
+name::foo < name::bar; // True
+name::foo > name::you_know_the_drill; // False
