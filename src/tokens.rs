@@ -5,17 +5,18 @@ pub enum TokenType {
     // Single char tokens
     LeftParenthesis,
     RightParenthesis,
-    LeftBrace,
-    RightBrace,
+    LeftBrace,  // UNUSED
+    RightBrace, // UNUSED
     LeftBracket,
     RightBracket,
     Comma,
-    Dot,
+    Dot, // UNUSED
     Semicolon,
     Minus,
     Plus,
     Slash,
     Star,
+    Equal,
 
     // One or two char tokens
     ColonEqual, // :=
@@ -57,8 +58,12 @@ pub enum TokenType {
     For,
     In,
     While,
+    Do,
     If,
+    Then,
     Else,
+    Begin, // For scoped blocks
+    End,
     Nil,
     Print,
     True,

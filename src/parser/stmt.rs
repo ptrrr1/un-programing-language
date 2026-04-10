@@ -1,24 +1,29 @@
-use crate::errors::typed_parser_errors::TypeError;
+use crate::{errors::typed_parser_errors::TypeError, tokens::Token};
 
 use super::{expr::Expr, typed_expr::TypedExpr};
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    ExprStatement(Expr),
-    PrintStmt(Expr),
+    Expr(Expr),
+    Print(Expr),
+    Var(Token, Expr),
 }
 
 pub enum TypedStmt {
-    ExprStatement(TypedExpr),
-    PrintStmt(TypedExpr),
+    Expr(TypedExpr),
+    Print(TypedExpr),
+    Var(Token, TypedExpr),
 }
 
 impl TypedStmt {
     pub fn eval(&self) {
         match self {
-            TypedStmt::ExprStatement(typed_expr) => println!(":: {:?}", typed_expr.eval()),
-            TypedStmt::PrintStmt(typed_expr) => {
+            TypedStmt::Expr(typed_expr) => println!(":: {:?}", typed_expr.eval()),
+            TypedStmt::Print(typed_expr) => {
                 println!(";; {:?}", typed_expr.eval().to_string())
+            }
+            TypedStmt::Var(token, typed_expr) => {
+                println!(":: {:?} := {:?}", token.token_type, typed_expr.eval())
             }
         }
     }
@@ -29,12 +34,16 @@ impl TryFrom<Stmt> for TypedStmt {
 
     fn try_from(value: Stmt) -> Result<Self, Self::Error> {
         match value {
-            Stmt::ExprStatement(expr) => match TypedExpr::try_from(expr) {
-                Ok(expr) => Ok(TypedStmt::ExprStatement(expr)),
+            Stmt::Expr(expr) => match TypedExpr::try_from(expr) {
+                Ok(expr) => Ok(TypedStmt::Expr(expr)),
                 Err(e) => Err(e),
             },
-            Stmt::PrintStmt(expr) => match TypedExpr::try_from(expr) {
-                Ok(expr) => Ok(TypedStmt::PrintStmt(expr)),
+            Stmt::Print(expr) => match TypedExpr::try_from(expr) {
+                Ok(expr) => Ok(TypedStmt::Print(expr)),
+                Err(e) => Err(e),
+            },
+            Stmt::Var(token, expr) => match TypedExpr::try_from(expr) {
+                Ok(expr) => Ok(TypedStmt::Var(token, expr)),
                 Err(e) => Err(e),
             },
         }

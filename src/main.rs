@@ -10,6 +10,7 @@ use parser::{Parser, stmt::TypedStmt};
 use scanner::Scanner;
 use tokens::TokenType;
 
+pub mod enviroment;
 pub mod errors;
 pub mod parser;
 pub mod scanner;
@@ -85,6 +86,11 @@ fn run_prompt() -> io::Result<()> {
                     break;
                 } else {
                     let scanner_result = Scanner::scan_line(buf, 0);
+
+                    if scanner_result.has_err() {
+                        println!("{:#?}", scanner_result.into_err());
+                        continue;
+                    }
 
                     let tokens = scanner_result
                         .into_tokens()

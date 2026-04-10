@@ -2,7 +2,7 @@
 //
 // Statically Typed (Or at least that's the goal)
 // Garbage collected
-// Very heavily influenced by Lox from Crafting Interpreters by Robert Nystrom
+// Very heavily influenced by Lox from Crafting Interpreters by Robert Nystrom and Python/Lua
 
 // This is a comment
 // This is a variable assignment
@@ -11,7 +11,7 @@ let b := a + 2;
 
 // Variables are mutable
 // NOTE: I would like to make them immutable
-a := a + 2;
+a = a + 2;
 
 // These are the data types:
 let bool := true; // Or 'false'
@@ -64,16 +64,17 @@ print(a); // Print statement, baked into the language!
 
 // Control flow
 // Useful when branching and looping!
+// If .. then .. else .. is an expression!
 
-if (condition) { // NOTE: Later on I want to make a language wihout braces
+if condition then
 	... // Lots of statements and expressions
-} else {
+else
 	... // Lots more
-}
+end
 
-while (condition) {
+while condition do
 	... // A tad more code
-}
+end
 
 // For loops use a unique syntax
 // [i..k;s] Reads as follows:
@@ -82,18 +83,18 @@ while (condition) {
 // TODO: Evaluate if loop will run infinitely and throw err
 // Should be easy taking into account s and k - i
 
-for [i..k;s] {
+for n in [i..k;s] do
 	... // Some more, but counted
-}
+end
 
 // FUNCTIONS!
 // This is meant as a scripting language (and learning as well)
 // As such, there are two types of functions: User-defined and Exposed
 
 // User-defined
-fun name_here(v1, v2, ..., vn) { // -> Return Type ... Is what I would say if it had it
+fun name_here(v1, v2, ..., vn) // -> Return Type ... Is what I would say if it had it
 	... // Code
-}
+end
 
 // using...
 name_here(a, b, ..., z); // NOTE: They might be first-class...
@@ -112,16 +113,16 @@ name_here(a, b, ..., z); // NOTE: They might be first-class...
 
 // We get a struct... Or so I hope to implement
 
-struct struct_name {
+struct struct_name
 	fields... // If Statically Typed add Type keyword here like: 'name: Type;'
-}
+end
 
 // And functions defined for it
 
-fun struct_name::function_name(bla, blabla, ...) {
+fun struct_name::function_name(bla, blabla, ...)
 	// Do stuff, alter values
 	self.field_name := 2;
-}
+end
 
 // NOTE: With side-effects being a concern, I would like to limit access edit access
 // to fields through something like:
@@ -135,11 +136,11 @@ variable_name::function_name(a, b, ...);
 
 // And enums...
 
-enum name {
+enum name
 	foo,
 	bar,
 	you_know_the_drill
-}
+end
 
 // Unlike rust, the are simple data types and only hold variations
 // Used like:

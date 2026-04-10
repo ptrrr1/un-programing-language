@@ -46,7 +46,11 @@ impl ScannerResult {
         self.tokens
     }
 
-    pub fn has_err(self) -> bool {
+    pub fn into_err(self) -> Vec<Error<ScannerError>> {
+        self.errors
+    }
+
+    pub fn has_err(&self) -> bool {
         !self.errors.is_empty()
     }
 }
@@ -165,7 +169,7 @@ impl Scanner {
                     }
                     _ if char.is_ascii_digit() => {
                         literal.push(char);
-
+                        // TODO: Add '_' to allow writing numbers like 1_000_000_000
                         match chars.peek() {
                             Some((_, c)) if c.is_ascii_digit() => continue,
                             Some((_, c)) if *c == '.' && !seen_dot => continue,
@@ -273,6 +277,7 @@ impl Scanner {
             "+" => Some(TokenType::Plus),
             "/" => Some(TokenType::Slash),
             "*" => Some(TokenType::Star),
+            "=" => Some(TokenType::Equal),
             ":=" => Some(TokenType::ColonEqual),
             "!=" => Some(TokenType::BangEqual),
             "==" => Some(TokenType::EqualEqual),
@@ -291,8 +296,12 @@ impl Scanner {
             "for" => Some(TokenType::For),
             "in" => Some(TokenType::In),
             "while" => Some(TokenType::While),
+            "do" => Some(TokenType::Do),
             "if" => Some(TokenType::If),
+            "then" => Some(TokenType::Then),
             "else" => Some(TokenType::Else),
+            "begin" => Some(TokenType::End),
+            "end" => Some(TokenType::End),
             "nil" => Some(TokenType::Nil),
             "print" => Some(TokenType::Print),
             "true" => Some(TokenType::True),
