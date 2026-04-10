@@ -124,12 +124,12 @@ fun struct_name::function_name(bla, blabla, ...)
 	self.field_name := 2;
 end
 
-// NOTE: With side-effects being a concern, I would like to limit access edit access
+// NOTE: With side-effects being a concern, I would like to limit edit access
 // to fields through something like:
 //
 // fun struct_name::function_name(editable_field, ...)
 //
-// Other fields would still be readable, but changing them is not
+// Other fields would still be readable, but changing them is not possible
 
 // Using it is easy, just do:
 variable_name::function_name(a, b, ...);
@@ -142,7 +142,7 @@ enum name
 	you_know_the_drill
 end
 
-// Unlike rust, the are simple data types and only hold variations
+// Unlike rust, they are simple data types and only hold variations
 // Used like:
 
 name::foo;
