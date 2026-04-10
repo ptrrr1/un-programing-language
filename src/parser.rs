@@ -6,21 +6,28 @@ Precedence (Lowest to Highest)
 / *
 - not
 
-PROGRAM -> STATEMENTS* EOF
+PROGRAM -> DECLARATION* EOF
+
+DECLARATION -> VAR_DECL | STATEMENT
+
+VAR_DECL -> let IDENTIFIER ":=" EXPR ";"
 
 STATEMENT -> EXPR_STATEMENT | PRINT_STATEMENT
 
 PRINT_STATEMENT -> "print""("EXPRESSION ")"";"
 
-EXPR_STATEMENT -> EXPRESSION ";""
+EXPR_STATEMENT -> EXPRESSION";""
+EXPRESSION -> ASSIGNMENT
+ASSIGNMENT -> IDENTIFIER "=" EXPRESSION | CONDITIONAL
 
-EXPRESSION -> EQUALITY
+CONDITIONAL -> "IF" EQUALITY "THEN" EQUALITY "ELSE" CONDITIONAL | EQUALITY
+
 EQUALITY -> COMPARISON ( ( "==" | "!=" ) COMPARISON )*
-COMPARSION TERM ( ( "<" | "<=" | ">" | ">=" ) TERM )*
+COMPARSION -> TERM ( ( "<" | "<=" | ">" | ">=" ) TERM )*
 TERM -> FACTOR ( ( "+" | "-" ) FACTOR )*
 FACTOR -> UNARY ( ( "/" | "*" ) UNARY )*
 UNARY -> ( "not" | "-" ) UNARY | PRIMARY
-PRIMARY -> LITERAL | STRING | BOOL | NIL | "(" EXPRESSION ")"
+PRIMARY -> LITERAL | STRING | BOOL | NIL | "(" EXPRESSION ")" | IDENTIFIER
 */
 
 use std::iter::Peekable;
@@ -67,7 +74,7 @@ impl Parser {
 
         let mut t = tokens.peekable();
         while t.peek().is_some() {
-            match Self::statement(&mut t) {
+            match Self::declaration(&mut t) {
                 Ok(stmt) => parser_result.stmt.push(stmt),
                 Err(e) => {
                     parser_result.errors.push(e);
@@ -77,6 +84,48 @@ impl Parser {
         }
 
         parser_result
+    }
+
+    fn declaration<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        if let Some(t) = tokens.peek() {
+            match t.token_type {
+                TokenType::Let => Self::var_declaration(tokens),
+                _ => Self::statement(tokens),
+            }
+        } else {
+            Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF))
+        }
+    }
+
+    fn var_declaration<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        // TODO: after adding type keywords, accept variable declaration without initialization
+        let _let = tokens.next().unwrap(); // I know next is LET
+
+        let identifer = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Identifier(_)),
+            ParserError::UnterminatedStmt,
+        )?; // TODO: new err
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::ColonEqual),
+            ParserError::UnterminatedStmt,
+        )?;
+
+        let expr = Self::expression(tokens)?;
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Semicolon),
+            ParserError::UnterminatedStmt,
+        )?;
+
+        Ok(Stmt::Var(identifer, expr))
     }
 
     fn statement<I: Iterator<Item = Token>>(
@@ -119,7 +168,7 @@ impl Parser {
             ParserError::UnterminatedStmt,
         )?;
 
-        Ok(Stmt::PrintStmt(expr))
+        Ok(Stmt::Print(expr))
     }
 
     fn expr_statement<I: Iterator<Item = Token>>(
@@ -131,13 +180,64 @@ impl Parser {
             |t| matches!(t, TokenType::Semicolon),
             ParserError::UnterminatedStmt,
         )?;
-        Ok(Stmt::ExprStatement(expr))
+        Ok(Stmt::Expr(expr))
     }
 
     fn expression<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
-        Self::equality(tokens)
+        Self::assignmet(tokens)
+    }
+
+    fn assignmet<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        let expr = Self::conditional_expr(tokens)?;
+
+        if Self::check(tokens, |t| matches!(t, TokenType::Equal)).is_some() {
+            let equals = tokens.next().unwrap();
+            let val = Self::assignmet(tokens)?;
+
+            // TODO: Add Variable, Assignment and IF ELSE Expr
+            if matches!(expr, Expr::Variable(_)) {
+                return Expr::assignment(expr, val);
+            }
+
+            return Err(Error::new(
+                Pos::from(equals.line),
+                ParserError::InvalidAssignment,
+            ));
+        }
+
+        Ok(expr)
+    }
+
+    fn conditional_expr<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        if Self::check(tokens, |t| matches!(t, TokenType::If)).is_none() {
+            return Self::equality(tokens);
+        }
+
+        let condition = Self::equality(tokens)?;
+
+        // TODO: Add correct err
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Then),
+            ParserError::UnexpectedEOF,
+        );
+        let true_branch = Self::equality(tokens)?;
+
+        // TODO: Add correct err
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Else),
+            ParserError::UnexpectedEOF,
+        );
+        let false_branch = Self::conditional_expr(tokens)?;
+
+        Ok(Expr::conditional(condition, true_branch, false_branch))
     }
 
     fn equality<I: Iterator<Item = Token>>(
@@ -264,6 +364,7 @@ impl Parser {
                     | TokenType::Nil
                     | TokenType::String(_)
                     | TokenType::Number(_)
+                    | TokenType::Identifier(_)
             )
         }) {
             return Ok(Expr::literal(t));

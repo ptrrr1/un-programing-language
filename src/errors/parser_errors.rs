@@ -7,6 +7,7 @@ pub enum ParserError {
     UnclosedExpr, // Missing ')'
     InvalidPrint,
     UnterminatedStmt,
+    InvalidAssignment,
     // ExpectedExpr,
 }
 
