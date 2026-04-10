@@ -33,6 +33,17 @@ pub enum TypedExpr {
         inner: Box<TypedExpr>,
         t: Types,
     },
+    Assignment {
+        target: Box<TypedExpr>,
+        expr: Box<TypedExpr>,
+        t: Types,
+    },
+    Conditional {
+        condition: Box<TypedExpr>,
+        true_case: Box<TypedExpr>,
+        false_case: Box<TypedExpr>,
+        t: Types,
+    },
 }
 
 impl TypedExpr {
@@ -41,7 +52,9 @@ impl TypedExpr {
             TypedExpr::Literal(ref t) => t.t_val.clone().as_type(),
             TypedExpr::Binary { t, .. }
             | TypedExpr::Unary { t, .. }
-            | TypedExpr::Grouping { t, .. } => t,
+            | TypedExpr::Grouping { t, .. }
+            | TypedExpr::Assignment { t, .. }
+            | TypedExpr::Conditional { t, .. } => t,
         }
     }
 
@@ -113,6 +126,20 @@ impl TypedExpr {
             }
             TypedExpr::Literal(typed_value) => typed_value.t_val.clone(),
             TypedExpr::Grouping { inner, .. } => inner.eval(),
+            TypedExpr::Assignment { target, expr, .. } => todo!(),
+            TypedExpr::Conditional {
+                condition,
+                true_case,
+                false_case,
+                ..
+            } => {
+                let c = condition.eval();
+                if c.get_truthyness() {
+                    true_case.eval()
+                } else {
+                    false_case.eval()
+                }
+            }
         }
     }
 }
@@ -175,9 +202,20 @@ impl TryFrom<Expr> for TypedExpr {
                     TokenType::Lesser
                     | TokenType::LesserEqual
                     | TokenType::Greater
-                    | TokenType::GreaterEqual
-                    | TokenType::EqualEqual
-                    | TokenType::BangEqual => Types::Bool,
+                    | TokenType::GreaterEqual => {
+                        if l.get_type() != r.get_type() {
+                            return Err(TypeError::Mismatch {
+                                expected: MismatchType::Multiple(vec![
+                                    (l.get_type(), l.get_type()),
+                                    (r.get_type(), r.get_type()),
+                                ]),
+                                found: MismatchType::Multiple(vec![(l.get_type(), r.get_type())]),
+                            });
+                        }
+
+                        Types::Bool
+                    }
+                    TokenType::EqualEqual | TokenType::BangEqual => Types::Bool,
                     TokenType::Minus | TokenType::Slash | TokenType::Star => {
                         if !matches!((l.get_type(), r.get_type()), (Types::Float, Types::Float)) {
                             return Err(TypeError::Mismatch {
@@ -214,12 +252,49 @@ impl TryFrom<Expr> for TypedExpr {
                     t,
                 })
             }
-            Expr::Assignment { target, expr } => todo!(),
+            Expr::Assignment { target, expr } => {
+                let t = TypedExpr::try_from(*target)?;
+                let e = TypedExpr::try_from(*expr)?;
+
+                if t.get_type() != e.get_type() {
+                    return Err(TypeError::Mismatch {
+                        expected: MismatchType::Single(vec![t.get_type()]),
+                        found: MismatchType::Single(vec![e.get_type()]),
+                    });
+                }
+
+                Ok(TypedExpr::Assignment {
+                    t: t.get_type(),
+                    target: Box::new(t),
+                    expr: Box::new(e),
+                })
+            }
             Expr::Conditional {
                 condition,
                 true_case,
                 false_case,
-            } => todo!(),
+            } => {
+                let c = TypedExpr::try_from(*condition)?;
+                let t = TypedExpr::try_from(*true_case)?;
+                let f = TypedExpr::try_from(*false_case)?;
+
+                if t.get_type() != f.get_type() {
+                    return Err(TypeError::Mismatch {
+                        expected: MismatchType::Multiple(vec![
+                            (t.get_type(), t.get_type()),
+                            (f.get_type(), f.get_type()),
+                        ]),
+                        found: MismatchType::Multiple(vec![(t.get_type(), f.get_type())]),
+                    });
+                }
+
+                Ok(TypedExpr::Conditional {
+                    t: t.get_type(),
+                    condition: Box::new(c),
+                    true_case: Box::new(t),
+                    false_case: Box::new(f),
+                })
+            }
         }
     }
 }
