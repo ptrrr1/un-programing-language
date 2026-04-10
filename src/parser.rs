@@ -186,25 +186,23 @@ impl Parser {
     fn expression<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
-        Self::assignmet(tokens)
+        Self::assignment(tokens)
     }
 
-    fn assignmet<I: Iterator<Item = Token>>(
+    fn assignment<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
         let expr = Self::conditional_expr(tokens)?;
 
-        if Self::check(tokens, |t| matches!(t, TokenType::Equal)).is_some() {
-            let equals = tokens.next().unwrap();
-            let val = Self::assignmet(tokens)?;
+        if let Some(eq) = tokens.next_if(|t| matches!(t.token_type, TokenType::Equal)) {
+            let val = Self::assignment(tokens)?;
 
-            // TODO: Add Variable, Assignment and IF ELSE Expr
-            if matches!(expr, Expr::Variable(_)) {
-                return Expr::assignment(expr, val);
+            if matches!(expr, Expr::Literal(_)) {
+                return Ok(Expr::assignment(expr, val));
             }
 
             return Err(Error::new(
-                Pos::from(equals.line),
+                Pos::from(eq.line),
                 ParserError::InvalidAssignment,
             ));
         }
@@ -215,7 +213,10 @@ impl Parser {
     fn conditional_expr<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
-        if Self::check(tokens, |t| matches!(t, TokenType::If)).is_none() {
+        if tokens
+            .next_if(|t| matches!(t.token_type, TokenType::If))
+            .is_none()
+        {
             return Self::equality(tokens);
         }
 
@@ -235,7 +236,14 @@ impl Parser {
             |t| matches!(t, TokenType::Else),
             ParserError::UnexpectedEOF,
         );
+
         let false_branch = Self::conditional_expr(tokens)?;
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::End),
+            ParserError::UnexpectedEOF,
+        );
 
         Ok(Expr::conditional(condition, true_branch, false_branch))
     }
@@ -343,7 +351,10 @@ impl Parser {
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
         // Grouping Start
-        if Self::check(tokens, |t| matches!(t, TokenType::LeftParenthesis)).is_some() {
+        if tokens
+            .next_if(|t| matches!(t.token_type, TokenType::LeftParenthesis))
+            .is_some()
+        {
             let expr = Self::expression(tokens)?;
 
             let _ = Self::consume(
@@ -356,9 +367,9 @@ impl Parser {
         }
 
         // Literal
-        if let Some(t) = Self::check(tokens, |t| {
+        if let Some(t) = tokens.next_if(|t| {
             matches!(
-                t,
+                t.token_type,
                 TokenType::False
                     | TokenType::True
                     | TokenType::Nil
@@ -410,16 +421,6 @@ impl Parser {
             Some(t) if expected(&t.token_type) => Ok(t),
             Some(t) => Err(Error::new(Pos::from(t.line), err)),
             None => Err(Error::new(Pos::EOF, err)),
-        }
-    }
-
-    fn check<I: Iterator<Item = Token>>(
-        tokens: &mut Peekable<I>,
-        expected: impl Fn(&TokenType) -> bool,
-    ) -> Option<Token> {
-        match tokens.peek() {
-            Some(t) if expected(&t.token_type) => tokens.next(),
-            _ => None,
         }
     }
 }

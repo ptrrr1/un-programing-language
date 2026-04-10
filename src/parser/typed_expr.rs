@@ -214,6 +214,12 @@ impl TryFrom<Expr> for TypedExpr {
                     t,
                 })
             }
+            Expr::Assignment { target, expr } => todo!(),
+            Expr::Conditional {
+                condition,
+                true_case,
+                false_case,
+            } => todo!(),
         }
     }
 }

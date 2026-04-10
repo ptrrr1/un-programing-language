@@ -149,6 +149,14 @@ impl Scanner {
                     // 12.34.54 => '12.3456' + error
                     '.' => {
                         match chars.peek() {
+                            Some((_, c)) if *c == '_' => {
+                                scanner_result.errors.push(Error::new(
+                                    Pos::Known(pos_v, pos_h),
+                                    ScannerError::InvalidToken(c.to_string()),
+                                ));
+
+                                continue;
+                            }
                             Some((_, c)) if c.is_ascii_digit() && !seen_dot => literal.push(char),
                             Some((_, c)) if c.is_ascii_digit() && seen_dot => continue,
                             Some((_, c)) if *c == '.' => {
@@ -167,11 +175,33 @@ impl Scanner {
 
                         seen_dot = true;
                     }
-                    _ if char.is_ascii_digit() => {
-                        literal.push(char);
-                        // TODO: Add '_' to allow writing numbers like 1_000_000_000
+                    // NOTE: Allow '_' to help write numbers
+                    '_' => {
                         match chars.peek() {
                             Some((_, c)) if c.is_ascii_digit() => continue,
+                            Some((_, c)) if *c == '.' => {
+                                scanner_result.errors.push(Error::new(
+                                    Pos::Known(pos_v, pos_h),
+                                    ScannerError::InvalidToken(c.to_string()),
+                                ));
+
+                                continue;
+                            }
+                            Some((_, c)) if c.is_ascii_alphabetic() => {
+                                // Consume token
+                                scanner_result.errors.push(Error::new(
+                                    Pos::Known(pos_v, pos_h),
+                                    ScannerError::MissingWhitespace,
+                                ));
+                            }
+                            _ => continue,
+                        }
+                    }
+                    _ if char.is_ascii_digit() => {
+                        literal.push(char);
+                        match chars.peek() {
+                            Some((_, c)) if c.is_ascii_digit() => continue,
+                            Some((_, c)) if *c == '_' => continue,
                             Some((_, c)) if *c == '.' && !seen_dot => continue,
                             Some((_, c)) if *c == '.' && seen_dot => {
                                 scanner_result.errors.push(Error::new(
@@ -266,8 +296,6 @@ impl Scanner {
         match literal {
             "(" => Some(TokenType::LeftParenthesis),
             ")" => Some(TokenType::RightParenthesis),
-            "{" => Some(TokenType::LeftBrace),
-            "}" => Some(TokenType::RightBrace),
             "[" => Some(TokenType::LeftBracket),
             "]" => Some(TokenType::RightBracket),
             "," => Some(TokenType::Comma),

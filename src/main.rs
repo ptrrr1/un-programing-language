@@ -31,20 +31,26 @@ fn main() -> io::Result<()> {
             let tokens = scanner_result
                 .into_tokens() // Destroys Scanner
                 .into_iter()
-                .filter(|t| !matches!(t.token_type, TokenType::Space));
-
+                .filter(|t| {
+                    !matches!(
+                        t.token_type,
+                        TokenType::Space | TokenType::CommentStarter | TokenType::Comment(_)
+                    )
+                });
+            dbg!(&tokens);
             let parser_result = Parser::parse_tokens(tokens);
+            dbg!(&parser_result);
 
-            if parser_result.has_err() {
-                dbg!(&parser_result);
-                dbg!(parser_result.into_err());
-                exit(70);
-            }
+            // if parser_result.has_err() {
+            //     dbg!(&parser_result);
+            //     dbg!(parser_result.into_err());
+            //     exit(70);
+            // }
 
-            let stmt = parser_result.into_stmt();
+            // let stmt = parser_result.into_stmt();
 
-            let i = stmt.iter().map(|s| TypedStmt::try_from(s.clone()));
-            i.for_each(|v| println!("{:#?}", v.is_ok().then(|| v.unwrap().eval())));
+            // let i = stmt.iter().map(|s| TypedStmt::try_from(s.clone()));
+            // i.for_each(|v| println!("{:#?}", v.is_ok().then(|| v.unwrap().eval())));
         } // File
         _ => {
             eprintln!("Usage: un [script]");

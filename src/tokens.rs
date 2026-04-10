@@ -5,8 +5,6 @@ pub enum TokenType {
     // Single char tokens
     LeftParenthesis,
     RightParenthesis,
-    LeftBrace,  // UNUSED
-    RightBrace, // UNUSED
     LeftBracket,
     RightBracket,
     Comma,
