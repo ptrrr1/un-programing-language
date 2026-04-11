@@ -43,6 +43,7 @@ use crate::{
 pub mod expr;
 pub mod stmt;
 pub mod typed_expr;
+pub mod typed_stmt;
 pub mod types;
 
 #[derive(Debug, Default)]

@@ -90,7 +90,7 @@ impl Scanner {
                         literal.push(char);
 
                         match chars.peek() {
-                            Some((_, c)) if c.is_ascii_digit() || *c == '.' => {
+                            Some((_, c)) if c.is_ascii_digit() || *c == '.' || *c == '_' => {
                                 state = States::InNumber;
                                 continue;
                             }
@@ -178,30 +178,28 @@ impl Scanner {
                     // NOTE: Allow '_' to help write numbers
                     '_' => {
                         match chars.peek() {
-                            Some((_, c)) if c.is_ascii_digit() => continue,
-                            Some((_, c)) if *c == '.' => {
+                            Some((_, c)) if c.is_ascii_digit() => {}
+                            Some((_, c)) if *c == '.' || *c == '_' => {
                                 scanner_result.errors.push(Error::new(
                                     Pos::Known(pos_v, pos_h),
                                     ScannerError::InvalidToken(c.to_string()),
                                 ));
-
-                                continue;
                             }
                             Some((_, c)) if c.is_ascii_alphabetic() => {
-                                // Consume token
                                 scanner_result.errors.push(Error::new(
                                     Pos::Known(pos_v, pos_h),
                                     ScannerError::MissingWhitespace,
                                 ));
                             }
-                            _ => continue,
+                            _ => {}
                         }
+
+                        continue;
                     }
                     _ if char.is_ascii_digit() => {
                         literal.push(char);
                         match chars.peek() {
-                            Some((_, c)) if c.is_ascii_digit() => continue,
-                            Some((_, c)) if *c == '_' => continue,
+                            Some((_, c)) if c.is_ascii_digit() || *c == '_' => continue,
                             Some((_, c)) if *c == '.' && !seen_dot => continue,
                             Some((_, c)) if *c == '.' && seen_dot => {
                                 scanner_result.errors.push(Error::new(
