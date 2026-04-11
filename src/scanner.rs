@@ -325,7 +325,7 @@ impl Scanner {
             "if" => Some(TokenType::If),
             "then" => Some(TokenType::Then),
             "else" => Some(TokenType::Else),
-            "begin" => Some(TokenType::End),
+            "begin" => Some(TokenType::Begin),
             "end" => Some(TokenType::End),
             "nil" => Some(TokenType::Nil),
             "print" => Some(TokenType::Print),

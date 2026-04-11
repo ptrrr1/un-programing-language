@@ -12,7 +12,9 @@ DECLARATION -> VAR_DECL | STATEMENT
 
 VAR_DECL -> let IDENTIFIER ":=" EXPR ";"
 
-STATEMENT -> EXPR_STATEMENT | PRINT_STATEMENT
+STATEMENT -> EXPR_STATEMENT | PRINT_STATEMENT | BLOCK
+
+BLOCK -> "begin" DECLARATION "end"
 
 PRINT_STATEMENT -> "print""("EXPRESSION ")"";"
 
@@ -134,12 +136,44 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         if let Some(t) = tokens.peek() {
             match t.token_type {
+                TokenType::Begin => {
+                    // According to the book, this will be reused for functions!
+                    let _begin = tokens.next().unwrap(); // I know next is BEGIN
+                    Ok(Stmt::Block(Self::block(tokens)?))
+                }
                 TokenType::Print => Self::print_statement(tokens),
                 _ => Self::expr_statement(tokens),
             }
         } else {
             Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF))
         }
+    }
+
+    fn block<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Vec<Stmt>, Error<ParserError>> {
+        let mut stmts: Vec<Stmt> = vec![];
+        while tokens
+            .peek()
+            .is_some_and(|t| !matches!(t.token_type, TokenType::End))
+        {
+            let stmt = Self::declaration(tokens)?;
+            stmts.push(stmt);
+        }
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::End),
+            ParserError::UnterminatedBlock,
+        )?;
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Semicolon),
+            ParserError::UnterminatedStmt,
+        )?;
+
+        Ok(stmts)
     }
 
     fn print_statement<I: Iterator<Item = Token>>(

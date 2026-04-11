@@ -143,7 +143,7 @@ impl Display for TokenType {
             TokenType::False => write!(f, "false"),
             TokenType::Let => write!(f, "let"),
 
-            TokenType::Comment(c) => write!(f, "//{}", c),
+            TokenType::Comment(c) => write!(f, "{}", c),
             TokenType::Space => write!(f, " "),
         }
     }

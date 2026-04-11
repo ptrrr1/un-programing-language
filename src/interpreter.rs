@@ -43,7 +43,7 @@ impl Interpreter {
         // println!(":: {:#?}", &tokens);
 
         let parser_result = Parser::parse_tokens(tokens);
-        // println!(":: {:#?}", &parser_result);
+        println!(":: {:#?}", &parser_result);
 
         if parser_result.has_err() {
             // println!("{:#?}", parser_result.into_err());
@@ -121,16 +121,16 @@ impl Interpreter {
                             continue;
                         }
 
-                        let stmt = parser_result.into_stmt().pop().unwrap();
-                        // println!(":: {:#?}", &expr);
+                        // let stmt = parser_result.into_stmt().pop().unwrap();
+                        // // println!(":: {:#?}", &expr);
 
-                        let typed_stmt = TypedStmt::try_from(stmt);
-                        // println!(":: {:#?}", &typed_expr);
+                        // let typed_stmt = TypedStmt::try_from(stmt);
+                        // // println!(":: {:#?}", &typed_expr);
 
-                        match typed_stmt {
-                            Ok(typed_expr) => typed_expr.eval(),
-                            Err(err) => println!(":: Err: {:?}", err),
-                        }
+                        // match typed_stmt {
+                        //     Ok(typed_expr) => typed_expr.eval(),
+                        //     Err(err) => println!(":: Err: {:?}", err),
+                        // }
                     }
                 }
                 Err(e) if e.kind() == io::ErrorKind::Interrupted => break,

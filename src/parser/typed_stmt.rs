@@ -39,6 +39,7 @@ impl TryFrom<Stmt> for TypedStmt {
                 Ok(expr) => Ok(TypedStmt::Var(token, expr)),
                 Err(e) => Err(e),
             },
+            Stmt::Block(stmts) => todo!(),
         }
     }
 }

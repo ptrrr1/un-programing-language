@@ -7,6 +7,7 @@ pub enum ParserError {
     UnclosedExpr, // Missing ')'
     InvalidPrint,
     UnterminatedStmt,
+    UnterminatedBlock,
     InvalidAssignment,
     // ExpectedExpr,
 }
@@ -20,6 +21,7 @@ impl Display for ParserError {
             ParserError::UnclosedExpr => write!(f, "Unclosed Expression"),
             ParserError::InvalidPrint => write!(f, "Invalid syntax for Print Statement"),
             ParserError::UnterminatedStmt => write!(f, "Unterminated Statementet, Missing ';'"),
+            ParserError::UnterminatedBlock => write!(f, "Unterminated Block, Missing 'end'"),
             ParserError::InvalidAssignment => write!(f, "Invalid Assignment Target"),
         }
     }
