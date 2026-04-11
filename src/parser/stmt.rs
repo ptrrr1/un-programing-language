@@ -13,9 +13,20 @@ pub enum Stmt {
     Block(Vec<Stmt>),
     Conditional {
         condition: Expr,
-        true_branch: Box<Stmt>,
-        false_branch: Option<Box<Stmt>>,
+        true_branch: Vec<Stmt>,
+        false_branch: Option<Vec<Stmt>>,
     },
+    While {
+        condition: Expr,
+        stmts: Vec<Stmt>,
+    },
+    // For {
+    //     identifier: Token,
+    //     start: i64,
+    //     end: i64,
+    //     step: i64,
+    //     stmts: Vec<Stmt>
+    // }
 }
 
 impl Stmt {
@@ -35,18 +46,19 @@ impl Stmt {
         Self::Block(stmts)
     }
 
-    pub fn conditional(condition: Expr, true_branch: Stmt, false_branch: Option<Stmt>) -> Self {
-        match false_branch {
-            Some(stmt) => Self::Conditional {
-                condition,
-                true_branch: Box::new(true_branch),
-                false_branch: Some(Box::new(stmt)),
-            },
-            None => Self::Conditional {
-                condition,
-                true_branch: Box::new(true_branch),
-                false_branch: None,
-            },
+    pub fn conditional(
+        condition: Expr,
+        true_branch: Vec<Stmt>,
+        false_branch: Option<Vec<Stmt>>,
+    ) -> Self {
+        Self::Conditional {
+            condition,
+            true_branch,
+            false_branch,
         }
+    }
+
+    pub fn while_stmt(condition: Expr, stmts: Vec<Stmt>) -> Self {
+        Self::While { condition, stmts }
     }
 }

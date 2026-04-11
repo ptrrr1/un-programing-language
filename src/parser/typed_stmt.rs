@@ -42,6 +42,7 @@ impl TryFrom<Stmt> for TypedStmt {
                 true_branch,
                 false_branch,
             } => todo!(),
+            Stmt::While { condition, stmts } => todo!(),
         }
     }
 }

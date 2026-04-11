@@ -1,18 +1,18 @@
 begin
 	if "abc" then
 		print("aaa");
-	else
+	else if "cdf" then
 		2 + 2;
+		end
 	end
 end
 
 begin
 	if "cdf" then
-		begin
 			print("ccc");
 			let y := "kaboom";
 
 			y = y + " kablow";
-		end
+		
 	end
 end

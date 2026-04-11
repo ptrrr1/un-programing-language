@@ -15,12 +15,18 @@ STATEMENT ::= EXPR_STATEMENT
               | PRINT_STATEMENT
               | BLOCK
               | IF
+              | WHILE
+              | FOR
 
-IF ::= "if" EQUALITY "then" STATEMENT ( "end" | "else" STATEMENT "end" )
+FOR ::= "for" IDENTIFIER "in" "[" NUMBER  ".." NUMBER ";" NUMBER "]" "do" DECLARATION* "end"
+
+WHILE ::= "while" OR "do" DECLARATION* "end"
+
+IF ::= "if" EQUALITY "then" DECLARATION* ( "end" | "else" DECLARATION* "end" )
 
 BLOCK ::= "begin" DECLARATION* "end" ";"
 
-PRINT_STATEMENT ::= "print""("EXPRESSION ")"";"
+PRINT_STATEMENT ::= "print""(" OR ")"";"
 
 EXPR_STATEMENT ::= EXPRESSION";"
 ```
@@ -55,8 +61,8 @@ PRIMARY ::= LITERAL
           | IDENTIFIER
           | CONDITIONAL
 
-CONDITIONAL ::= "if" EQUALITY "then" EQUALITY "else" EQUALITY "end"
-              | EQUALITY
+CONDITIONAL ::= "if" OR "then" OR "else" OR "end"
+              | OR
 ```
 
 <!--

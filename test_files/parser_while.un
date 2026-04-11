@@ -1,0 +1,6 @@
+while true do
+	print("abc");
+	let x:= 2 + 2;
+	x = 3 + x;
+	let y := if x then 5 else 54 end;
+end
