@@ -14,7 +14,7 @@ pub enum ParserError {
 
 impl Display for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Scanner Error: ")?;
+        write!(f, "Parser Error: ")?;
         match self {
             ParserError::InvalidToken(token_type) => write!(f, "Invalid Token({token_type})"),
             ParserError::UnexpectedEOF => write!(f, "Unexpected End of File"),

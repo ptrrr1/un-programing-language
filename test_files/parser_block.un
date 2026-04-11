@@ -8,13 +8,10 @@ begin
 	
 	begin
 		let x := 5 + (if nil then 10 else -5 end);
-		// '()' is required because when evaluating a binary it's expected a factor
-		// a conditional expr binds more loosely
-		// I could change the rule allow either a factor or conditional expr 
-	end;
+	end
 
 	print(y);
-end;
+end
 
 
 begin
@@ -22,7 +19,7 @@ begin
 				then (5 + 2 / 3 * (500 - 3)) == true
 				else false
 			end;
-end;
+end
 
 begin
 	1 + 2;

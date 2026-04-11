@@ -10,6 +10,7 @@ pub enum ScannerError {
 
 impl Display for ScannerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Scanner Error: ")?;
         match self {
             ScannerError::InvalidToken(t) => write!(f, "Invalid Token: '{t}'"),
             ScannerError::MissingSeparation => {

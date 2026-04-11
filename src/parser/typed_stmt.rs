@@ -35,11 +35,13 @@ impl TryFrom<Stmt> for TypedStmt {
                 Ok(expr) => Ok(TypedStmt::Print(expr)),
                 Err(e) => Err(e),
             },
-            Stmt::Var(token, expr) => match TypedExpr::try_from(expr) {
-                Ok(expr) => Ok(TypedStmt::Var(token, expr)),
-                Err(e) => Err(e),
-            },
+            Stmt::Var { target, expr } => todo!(),
             Stmt::Block(stmts) => todo!(),
+            Stmt::Conditional {
+                condition,
+                true_branch,
+                false_branch,
+            } => todo!(),
         }
     }
 }

@@ -29,6 +29,7 @@ pub enum TypedExpr {
         t: Types,
     },
     Literal(TypedValue),
+    // Variable(TypedValue),
     Grouping {
         inner: Box<TypedExpr>,
         t: Types,
@@ -295,6 +296,7 @@ impl TryFrom<Expr> for TypedExpr {
                     false_case: Box::new(f),
                 })
             }
+            Expr::Variable(token) => todo!(),
         }
     }
 }

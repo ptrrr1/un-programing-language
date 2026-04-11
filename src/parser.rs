@@ -1,36 +1,3 @@
-/*
-Precedence (Lowest to Highest)
-== !=
-> >= < <=
-- +
-/ *
-- not
-
-PROGRAM -> DECLARATION* EOF
-
-DECLARATION -> VAR_DECL | STATEMENT
-
-VAR_DECL -> let IDENTIFIER ":=" EXPR ";"
-
-STATEMENT -> EXPR_STATEMENT | PRINT_STATEMENT | BLOCK
-
-BLOCK -> "begin" DECLARATION* "end" ";"
-
-PRINT_STATEMENT -> "print""("EXPRESSION ")"";"
-
-EXPR_STATEMENT -> EXPRESSION";""
-EXPRESSION -> ASSIGNMENT
-ASSIGNMENT -> IDENTIFIER "=" EXPRESSION | EQUALITY
-EQUALITY -> COMPARISON ( ( "==" | "!=" ) COMPARISON )*
-COMPARISION -> TERM ( ( "<" | "<=" | ">" | ">=" ) TERM )*
-TERM -> FACTOR ( ( "+" | "-" ) FACTOR )*
-FACTOR -> UNARY ( ( "/" | "*" ) UNARY )*
-UNARY -> ( "not" | "-" ) UNARY | PRIMARY
-PRIMARY -> LITERAL | STRING | BOOL | NIL | "(" EXPRESSION ")" | IDENTIFIER | CONDITIONAL
-
-CONDITIONAL -> "if" EQUALITY "then" EQUALITY "else" CONDITIONAL "end" | EQUALITY
-*/
-
 use std::iter::Peekable;
 
 use expr::Expr;
@@ -127,7 +94,7 @@ impl Parser {
             ParserError::UnterminatedStmt,
         )?;
 
-        Ok(Stmt::Var(identifer, expr))
+        Ok(Stmt::var(identifer, expr))
     }
 
     fn statement<I: Iterator<Item = Token>>(
@@ -135,12 +102,13 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         if let Some(t) = tokens.peek() {
             match t.token_type {
+                TokenType::Print => Self::print_stmt(tokens),
+                TokenType::If => Self::conditional_stmt(tokens),
                 TokenType::Begin => {
                     // According to the book, this will be reused for functions!
                     let _begin = tokens.next().unwrap(); // I know next is BEGIN
-                    Ok(Stmt::Block(Self::block(tokens)?))
+                    Ok(Stmt::block(Self::block(tokens)?))
                 }
-                TokenType::Print => Self::print_statement(tokens),
                 _ => Self::expr_statement(tokens),
             }
         } else {
@@ -148,34 +116,7 @@ impl Parser {
         }
     }
 
-    fn block<I: Iterator<Item = Token>>(
-        tokens: &mut Peekable<I>,
-    ) -> Result<Vec<Stmt>, Error<ParserError>> {
-        let mut stmts: Vec<Stmt> = vec![];
-        while tokens
-            .peek()
-            .is_some_and(|t| !matches!(t.token_type, TokenType::End))
-        {
-            let stmt = Self::declaration(tokens)?;
-            stmts.push(stmt);
-        }
-
-        let _ = Self::consume(
-            tokens,
-            |t| matches!(t, TokenType::End),
-            ParserError::UnterminatedBlock,
-        )?;
-
-        let _ = Self::consume(
-            tokens,
-            |t| matches!(t, TokenType::Semicolon),
-            ParserError::UnterminatedStmt,
-        )?;
-
-        Ok(stmts)
-    }
-
-    fn print_statement<I: Iterator<Item = Token>>(
+    fn print_stmt<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Stmt, Error<ParserError>> {
         let _print = tokens.next().unwrap(); // I know next is PRINT
@@ -202,7 +143,81 @@ impl Parser {
             ParserError::UnterminatedStmt,
         )?;
 
-        Ok(Stmt::Print(expr))
+        Ok(Stmt::print(expr))
+    }
+
+    fn conditional_stmt<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        let _if = tokens.next().unwrap();
+
+        let condition = Self::equality(tokens)?;
+
+        // TODO: Add correct err
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Then),
+            ParserError::UnexpectedEOF,
+        );
+
+        let true_branch = Self::statement(tokens)?;
+
+        if tokens
+            .next_if(|t| matches!(t.token_type, TokenType::Else))
+            .is_none()
+        {
+            let _ = Self::consume(
+                tokens,
+                |t| matches!(t, TokenType::End),
+                ParserError::UnexpectedEOF,
+            );
+
+            return Ok(Stmt::conditional(condition, true_branch, None));
+        }
+
+        // Don't need a Self::consume for 'else' because of "next_if", it
+        // consumes if it finds it
+
+        let false_branch = Self::statement(tokens)?;
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::End),
+            ParserError::UnexpectedEOF,
+        );
+
+        Ok(Stmt::conditional(
+            condition,
+            true_branch,
+            Some(false_branch),
+        ))
+    }
+
+    fn block<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Vec<Stmt>, Error<ParserError>> {
+        let mut stmts: Vec<Stmt> = vec![];
+        while tokens
+            .peek()
+            .is_some_and(|t| !matches!(t.token_type, TokenType::End))
+        {
+            let stmt = Self::declaration(tokens)?;
+            stmts.push(stmt);
+        }
+
+        let _ = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::End),
+            ParserError::UnterminatedBlock,
+        )?;
+
+        // let _ = Self::consume(
+        //     tokens,
+        //     |t| matches!(t, TokenType::Semicolon),
+        //     ParserError::UnterminatedStmt,
+        // )?;
+
+        Ok(stmts)
     }
 
     fn expr_statement<I: Iterator<Item = Token>>(
@@ -226,19 +241,48 @@ impl Parser {
     fn assignment<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
-        let expr = Self::equality(tokens)?;
+        let expr = Self::or(tokens)?;
 
         if let Some(eq) = tokens.next_if(|t| matches!(t.token_type, TokenType::Equal)) {
+            // NOTE: This allows something like:
+            // x = y = z = ... = LITERAL;
+            // While not bad, just seems weird I guess
+            // Might be kept
             let val = Self::assignment(tokens)?;
 
-            if matches!(expr, Expr::Literal(_)) {
+            if matches!(expr, Expr::Variable(_)) {
                 return Ok(Expr::assignment(expr, val));
             }
 
+            // This synchronizes but the book says not to
             return Err(Error::new(
                 Pos::from(eq.line),
                 ParserError::InvalidAssignment,
             ));
+        }
+
+        Ok(expr)
+    }
+
+    fn or<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Result<Expr, Error<ParserError>> {
+        let mut expr = Self::and(tokens)?;
+
+        while let Some(op) = tokens.next_if(|t| matches!(t.token_type, TokenType::Or)) {
+            let expr_r = Self::and(tokens)?;
+            expr = Expr::binary(expr, op.clone(), expr_r);
+        }
+
+        Ok(expr)
+    }
+
+    fn and<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        let mut expr = Self::equality(tokens)?;
+
+        while let Some(op) = tokens.next_if(|t| matches!(t.token_type, TokenType::And)) {
+            let expr_r = Self::equality(tokens)?;
+            expr = Expr::binary(expr, op.clone(), expr_r);
         }
 
         Ok(expr)
@@ -351,10 +395,14 @@ impl Parser {
                     | TokenType::Nil
                     | TokenType::String(_)
                     | TokenType::Number(_)
-                    | TokenType::Identifier(_)
             )
         }) {
             return Ok(Expr::literal(t));
+        }
+
+        // Identifier
+        if let Some(t) = tokens.next_if(|t| matches!(t.token_type, TokenType::Identifier(_))) {
+            return Ok(Expr::variable(t));
         }
 
         // Conditional
@@ -397,6 +445,7 @@ impl Parser {
 
         let false_branch = Self::equality(tokens)?;
 
+        // NOTE: Might remove for conditional expression...
         let _ = Self::consume(
             tokens,
             |t| matches!(t, TokenType::End),

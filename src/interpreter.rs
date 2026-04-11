@@ -110,7 +110,7 @@ impl Interpreter {
                         // println!(":: {:#?}", &tokens);
 
                         let parser_result = Parser::parse_tokens(tokens);
-                        // println!(":: {:#?}", &parser_result);
+                        println!(":: {:#?}", &parser_result);
 
                         if parser_result.has_err() {
                             // println!("{:#?}", parser_result.into_err());
