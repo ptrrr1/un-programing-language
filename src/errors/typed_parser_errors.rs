@@ -1,6 +1,6 @@
-use crate::parser::types::Types;
+use std::fmt::Display;
 
-use super::_Error;
+use crate::parser::types::Types;
 
 #[derive(Debug)]
 pub enum TypeError {
@@ -12,8 +12,15 @@ pub enum TypeError {
 
 #[derive(Debug)]
 pub enum MismatchType {
+    // TODO: Remake this!!!
     Single(Vec<Types>),
     Multiple(Vec<(Types, Types)>),
 }
 
-impl _Error for TypeError {}
+impl Display for TypeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl std::error::Error for TypeError {}

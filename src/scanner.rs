@@ -101,7 +101,7 @@ impl Scanner {
 
                                 scanner_result.errors.push(Error::new(
                                     Pos::Known(pos_v, pos_h),
-                                    ScannerError::MissingWhitespace,
+                                    ScannerError::MissingSeparation,
                                 ));
                             }
                             _ => {
@@ -188,7 +188,7 @@ impl Scanner {
                             Some((_, c)) if c.is_ascii_alphabetic() => {
                                 scanner_result.errors.push(Error::new(
                                     Pos::Known(pos_v, pos_h),
-                                    ScannerError::MissingWhitespace,
+                                    ScannerError::MissingSeparation,
                                 ));
                             }
                             _ => {}
@@ -213,7 +213,7 @@ impl Scanner {
                                 // Consume token
                                 scanner_result.errors.push(Error::new(
                                     Pos::Known(pos_v, pos_h),
-                                    ScannerError::MissingWhitespace,
+                                    ScannerError::MissingSeparation,
                                 ));
                             }
                             _ => {} // Consume token
@@ -223,7 +223,7 @@ impl Scanner {
                         literal.clear();
                         state = States::Start;
                     }
-                    _ => unimplemented!(),
+                    _ => unreachable!(),
                 },
 
                 States::InString => match char {
@@ -255,7 +255,7 @@ impl Scanner {
                         literal.clear();
                         state = States::Start;
                     }
-                    _ => unimplemented!(),
+                    _ => unreachable!(),
                 },
 
                 States::InComment => match char {
@@ -312,7 +312,6 @@ impl Scanner {
             "<" => Some(TokenType::Lesser),
             "<=" => Some(TokenType::LesserEqual),
             "//" => Some(TokenType::CommentStarter),
-            "->" => Some(TokenType::Arrow),
             ".." => Some(TokenType::DotDot),
             "not" => Some(TokenType::Not),
             "and" => Some(TokenType::And),

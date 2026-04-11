@@ -1,4 +1,26 @@
-use std::fmt::{Debug, Formatter, Result};
+use std::fmt::{Debug, Display, Formatter, Result};
+
+#[derive(Clone)]
+pub struct Token {
+    pub token_type: TokenType,
+    pub line: (usize, usize),
+}
+
+impl Token {
+    pub fn new(token_type: TokenType, line: (usize, usize)) -> Self {
+        Token { token_type, line }
+    }
+
+    pub fn as_token_type(self) -> TokenType {
+        self.token_type
+    }
+}
+
+impl Debug for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "[{:?} : Token::{:?}]", self.line, self.token_type,)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum TokenType {
@@ -25,7 +47,6 @@ pub enum TokenType {
     Lesser,
     LesserEqual,
     CommentStarter, // '//'
-    Arrow,          // ->
     DotDot,         // .. for [n..m;s]
 
     // Literals
@@ -72,24 +93,58 @@ pub enum TokenType {
     Space,
 }
 
-#[derive(Clone)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub line: (usize, usize),
-}
-
-impl Token {
-    pub fn new(token_type: TokenType, line: (usize, usize)) -> Self {
-        Token { token_type, line }
-    }
-
-    pub fn as_token_type(self) -> TokenType {
-        self.token_type
-    }
-}
-
-impl Debug for Token {
+impl Display for TokenType {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "[{:?} : Token::{:?}]", self.line, self.token_type,)
+        match self {
+            TokenType::LeftParenthesis => write!(f, "("),
+            TokenType::RightParenthesis => write!(f, ")"),
+            TokenType::LeftBracket => write!(f, "["),
+            TokenType::RightBracket => write!(f, "]"),
+            TokenType::Comma => write!(f, ","),
+            TokenType::Dot => write!(f, "."),
+            TokenType::Semicolon => write!(f, ";"),
+            TokenType::Minus => write!(f, "-"),
+            TokenType::Plus => write!(f, "+"),
+            TokenType::Slash => write!(f, "/"),
+            TokenType::Star => write!(f, "*"),
+            TokenType::Equal => write!(f, "="),
+            TokenType::ColonEqual => write!(f, ":="),
+            TokenType::BangEqual => write!(f, "!="),
+            TokenType::EqualEqual => write!(f, "=="),
+            TokenType::Greater => write!(f, ">"),
+            TokenType::GreaterEqual => write!(f, ">="),
+            TokenType::Lesser => write!(f, "<"),
+            TokenType::LesserEqual => write!(f, "<="),
+            TokenType::CommentStarter => write!(f, "//"),
+            TokenType::DotDot => write!(f, ".."),
+
+            TokenType::Identifier(name) => write!(f, "identifier({})", name),
+            TokenType::ExposedFunction(name) => write!(f, "exposed_fn({})", name),
+            TokenType::String(s) => write!(f, "\"{}\"", s),
+            TokenType::Number(n) => write!(f, "{}", n),
+
+            TokenType::Not => write!(f, "not"),
+            TokenType::And => write!(f, "and"),
+            TokenType::Or => write!(f, "or"),
+            TokenType::Fun => write!(f, "fun"),
+            TokenType::Return => write!(f, "return"),
+            TokenType::For => write!(f, "for"),
+            TokenType::In => write!(f, "in"),
+            TokenType::While => write!(f, "while"),
+            TokenType::Do => write!(f, "do"),
+            TokenType::If => write!(f, "if"),
+            TokenType::Then => write!(f, "then"),
+            TokenType::Else => write!(f, "else"),
+            TokenType::Begin => write!(f, "begin"),
+            TokenType::End => write!(f, "end"),
+            TokenType::Nil => write!(f, "nil"),
+            TokenType::Print => write!(f, "print"),
+            TokenType::True => write!(f, "true"),
+            TokenType::False => write!(f, "false"),
+            TokenType::Let => write!(f, "let"),
+
+            TokenType::Comment(c) => write!(f, "//{}", c),
+            TokenType::Space => write!(f, " "),
+        }
     }
 }

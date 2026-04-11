@@ -25,22 +25,32 @@ impl Interpreter {
         });
 
         let scanner_result = Scanner::scan_file(&mut buffer);
-        let tokens = scanner_result
-            .into_tokens() // Destroys Scanner
-            .into_iter()
-            .filter(|t| {
-                !matches!(
-                    t.token_type,
-                    TokenType::Space | TokenType::CommentStarter | TokenType::Comment(_)
-                )
-            });
-        dbg!(&tokens);
+        if scanner_result.has_err() {
+            // println!("{:#?}", scanner_result.into_err());
+            scanner_result
+                .into_err()
+                .into_iter()
+                .for_each(|e| println!("{}", e));
+            exit(70);
+        }
+
+        let tokens = scanner_result.into_tokens().into_iter().filter(|t| {
+            !matches!(
+                t.token_type,
+                TokenType::Space | TokenType::CommentStarter | TokenType::Comment(_)
+            )
+        });
+        // println!(":: {:#?}", &tokens);
+
         let parser_result = Parser::parse_tokens(tokens);
-        dbg!(&parser_result);
+        // println!(":: {:#?}", &parser_result);
 
         if parser_result.has_err() {
-            dbg!(&parser_result);
-            dbg!(parser_result.into_err());
+            // println!("{:#?}", parser_result.into_err());
+            parser_result
+                .into_err()
+                .into_iter()
+                .for_each(|e| println!("{}", e));
             exit(70);
         }
 
@@ -85,7 +95,11 @@ impl Interpreter {
                         let scanner_result = Scanner::scan_line(buf, 0);
 
                         if scanner_result.has_err() {
-                            println!("{:#?}", scanner_result.into_err());
+                            // println!("{:#?}", scanner_result.into_err());
+                            scanner_result
+                                .into_err()
+                                .into_iter()
+                                .for_each(|e| println!("{}", e));
                             continue;
                         }
 
@@ -99,7 +113,11 @@ impl Interpreter {
                         // println!(":: {:#?}", &parser_result);
 
                         if parser_result.has_err() {
-                            println!("{:#?}", parser_result.into_err());
+                            // println!("{:#?}", parser_result.into_err());
+                            parser_result
+                                .into_err()
+                                .into_iter()
+                                .for_each(|e| println!("{}", e));
                             continue;
                         }
 
