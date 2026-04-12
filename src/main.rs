@@ -14,10 +14,12 @@ pub mod scanner;
 pub mod tokens;
 
 fn main() -> io::Result<()> {
+    let interpreter = Interpreter::default();
+
     let args: Vec<String> = env::args().skip(1).collect();
     match args.len() {
-        0 => Interpreter::run_prompt()?,       // Interactive
-        1 => Interpreter::run_file(&args[0])?, // File
+        0 => Interpreter::run_prompt()?,      // Interactive
+        1 => interpreter.run_file(&args[0])?, // File
         _ => {
             eprintln!("Usage: un [script]");
             exit(64);

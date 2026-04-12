@@ -22,7 +22,7 @@ impl Debug for Token {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Single char tokens
     LeftParenthesis,

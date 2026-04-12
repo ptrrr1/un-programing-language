@@ -2,7 +2,8 @@ use std::fmt::Display;
 
 pub mod parser_errors;
 pub mod scanner_errors;
-pub mod typed_parser_errors;
+
+// TODO: use thiserror
 
 #[derive(Debug)]
 pub enum Pos {

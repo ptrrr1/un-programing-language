@@ -1,23 +1,21 @@
 use std::{
+    cell::RefCell,
     fs::File,
     io::{self, BufReader, Write},
     path::Path,
     process::exit,
+    rc::Rc,
 };
 
-use crate::{
-    enviroment::Enviroment,
-    parser::{Parser, typed_stmt::TypedStmt},
-    scanner::Scanner,
-    tokens::TokenType,
-};
+use crate::{enviroment::Enviroment, parser::Parser, scanner::Scanner, tokens::TokenType};
 
+#[derive(Default)]
 pub struct Interpreter {
-    env: Enviroment,
+    env: Rc<RefCell<Enviroment>>,
 }
 
 impl Interpreter {
-    pub fn run_file(file_path: &String) -> io::Result<()> {
+    pub fn run_file(&self, file_path: &String) -> io::Result<()> {
         let file_path = Path::new(file_path);
         let mut buffer = Self::read_file(file_path).unwrap_or_else(|err| {
             eprintln!("{}", err);
@@ -43,7 +41,7 @@ impl Interpreter {
         // println!(":: {:#?}", &tokens);
 
         let parser_result = Parser::parse_tokens(tokens);
-        println!(":: {:#?}", &parser_result);
+        // println!(":: {:#?}", &parser_result);
 
         if parser_result.has_err() {
             // println!("{:#?}", parser_result.into_err());
@@ -54,10 +52,17 @@ impl Interpreter {
             exit(70);
         }
 
-        // let stmt = parser_result.into_stmt();
+        // dbg!(&parser_result);
 
-        // let i = stmt.iter().map(|s| TypedStmt::try_from(s.clone()));
-        // i.for_each(|v| println!("{:#?}", v.is_ok().then(|| v.unwrap().eval())));
+        for stmt in parser_result.into_stmt() {
+            let r = stmt.eval(self.env.clone());
+            match r {
+                Ok(_) => {}
+                Err(e) => {
+                    dbg!(e);
+                }
+            }
+        }
 
         Ok(())
     }
@@ -110,7 +115,7 @@ impl Interpreter {
                         // println!(":: {:#?}", &tokens);
 
                         let parser_result = Parser::parse_tokens(tokens);
-                        println!(":: {:#?}", &parser_result);
+                        // println!(":: {:#?}", &parser_result);
 
                         if parser_result.has_err() {
                             // println!("{:#?}", parser_result.into_err());
@@ -120,17 +125,6 @@ impl Interpreter {
                                 .for_each(|e| println!("{}", e));
                             continue;
                         }
-
-                        // let stmt = parser_result.into_stmt().pop().unwrap();
-                        // // println!(":: {:#?}", &expr);
-
-                        // let typed_stmt = TypedStmt::try_from(stmt);
-                        // // println!(":: {:#?}", &typed_expr);
-
-                        // match typed_stmt {
-                        //     Ok(typed_expr) => typed_expr.eval(),
-                        //     Err(err) => println!(":: Err: {:?}", err),
-                        // }
                     }
                 }
                 Err(e) if e.kind() == io::ErrorKind::Interrupted => break,

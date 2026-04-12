@@ -10,8 +10,6 @@ use crate::{
 
 pub mod expr;
 pub mod stmt;
-pub mod typed_expr;
-pub mod typed_stmt;
 pub mod types;
 
 #[derive(Debug, Default)]
@@ -80,7 +78,7 @@ impl Parser {
             ParserError::UnterminatedStmt,
         )?; // TODO: new err
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::ColonEqual),
             ParserError::UnterminatedStmt,
@@ -88,7 +86,7 @@ impl Parser {
 
         let expr = Self::expression(tokens)?;
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::Semicolon),
             ParserError::UnterminatedStmt,
@@ -122,7 +120,7 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         let _print = tokens.next().unwrap(); // I know next is PRINT
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::LeftParenthesis),
             ParserError::InvalidPrint,
@@ -132,13 +130,13 @@ impl Parser {
         // A print() statement is not wrong, but maybe it should have a warning
         let expr = Self::expression(tokens)?;
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::RightParenthesis),
             ParserError::UnclosedExpr,
         )?;
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::Semicolon),
             ParserError::UnterminatedStmt,
@@ -155,11 +153,11 @@ impl Parser {
         let condition = Self::equality(tokens)?;
 
         // TODO: Add correct err
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::Then),
             ParserError::UnexpectedEOF,
-        );
+        )?;
 
         let true_branch = Self::block_helper(tokens, &|t| {
             !matches!(t.token_type, TokenType::End | TokenType::Else)
@@ -169,11 +167,11 @@ impl Parser {
             .next_if(|t| matches!(t.token_type, TokenType::Else))
             .is_none()
         {
-            let _ = Self::consume(
+            Self::consume(
                 tokens,
                 |t| matches!(t, TokenType::End),
                 ParserError::UnexpectedEOF,
-            );
+            )?;
 
             return Ok(Stmt::conditional(condition, true_branch, None));
         }
@@ -184,11 +182,11 @@ impl Parser {
         let false_branch =
             Self::block_helper(tokens, &|t| !matches!(t.token_type, TokenType::End))?;
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::End),
             ParserError::UnexpectedEOF,
-        );
+        )?;
 
         Ok(Stmt::conditional(
             condition,
@@ -204,7 +202,7 @@ impl Parser {
 
         let condition = Self::or(tokens)?;
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::Do),
             ParserError::UnterminatedBlock, // TODO: Actual Err
@@ -212,7 +210,7 @@ impl Parser {
 
         let stmts = Self::block_helper(tokens, &|t| !matches!(t.token_type, TokenType::End))?;
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::End),
             ParserError::UnterminatedBlock,
@@ -226,7 +224,7 @@ impl Parser {
     ) -> Result<Vec<Stmt>, Error<ParserError>> {
         let stmts = Self::block_helper(tokens, &|t| !matches!(t.token_type, TokenType::End))?;
 
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::End),
             ParserError::UnterminatedBlock,
@@ -239,7 +237,7 @@ impl Parser {
         tokens: &mut Peekable<I>,
     ) -> Result<Stmt, Error<ParserError>> {
         let expr = Self::expression(tokens)?;
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::Semicolon),
             ParserError::UnterminatedStmt,
@@ -392,7 +390,7 @@ impl Parser {
         {
             let expr = Self::expression(tokens)?;
 
-            let _ = Self::consume(
+            Self::consume(
                 tokens,
                 |t| matches!(t, TokenType::RightParenthesis),
                 ParserError::UnclosedExpr,
@@ -444,28 +442,28 @@ impl Parser {
         let condition = Self::or(tokens)?;
 
         // TODO: Add correct err
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::Then),
             ParserError::UnexpectedEOF,
-        );
+        )?;
         let true_branch = Self::or(tokens)?;
 
         // TODO: Add correct err
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::Else),
             ParserError::UnexpectedEOF,
-        );
+        )?;
 
         let false_branch = Self::or(tokens)?;
 
         // NOTE: Might remove for conditional expression...
-        let _ = Self::consume(
+        Self::consume(
             tokens,
             |t| matches!(t, TokenType::End),
             ParserError::UnexpectedEOF,
-        );
+        )?;
 
         Ok(Expr::conditional(condition, true_branch, false_branch))
     }
@@ -505,11 +503,11 @@ impl Parser {
 
     fn block_helper<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
-        endpoint: &impl Fn(&Token) -> bool,
+        not_endpoint: &impl Fn(&Token) -> bool,
     ) -> Result<Vec<Stmt>, Error<ParserError>> {
         let mut stmts: Vec<Stmt> = vec![];
 
-        while tokens.peek().is_some_and(endpoint) {
+        while tokens.peek().is_some_and(not_endpoint) {
             let stmt = Self::declaration(tokens)?;
             stmts.push(stmt);
         }

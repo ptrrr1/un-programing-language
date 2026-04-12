@@ -1,23 +1,49 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::parser::types::TValues;
+use crate::parser::types::Value;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Enviroment {
-    variables: HashMap<String, TValues>,
-    outer: Option<Box<Enviroment>>,
+    variables: RefCell<HashMap<String, Value>>,
+    outer: Option<Rc<RefCell<Enviroment>>>,
 }
 
 impl Enviroment {
-    pub fn define_var(&mut self, identifier: String, val: TValues) {
-        self.variables.insert(identifier, val);
+    pub fn define_var(self, identifier: &str, val: Value) {
+        self.variables
+            .borrow_mut()
+            .insert(identifier.to_string(), val);
     }
 
-    pub fn get_var_val(&self, identifier: &String) -> Option<&TValues> {
-        if let Some(outer) = self.outer.as_ref() {
-            return outer.get_var_val(identifier);
+    pub fn get_var_val(&self, identifier: &String) -> Option<Value> {
+        if let Some(v) = self.variables.borrow().get(identifier) {
+            return Some(v.clone());
         }
 
-        self.variables.get(identifier)
+        if let Some(outer) = self.outer.as_ref() {
+            return outer.borrow().get_var_val(identifier);
+        }
+
+        None
+    }
+
+    pub fn update_var(&self, identifier: &str, val: Value) -> Result<(), &'static str> {
+        if self.variables.borrow().contains_key(identifier) {
+            self.variables
+                .borrow_mut()
+                .insert(identifier.to_string(), val);
+            return Ok(());
+        }
+
+        if let Some(outer) = self.outer.as_ref() {
+            return outer.borrow().update_var(identifier, val);
+        }
+
+        // Variable doesn't exist anywhere
+        Err("Undefined variable")
+    }
+
+    pub fn set_outer(&mut self, outer: Rc<RefCell<Enviroment>>) {
+        self.outer = Some(outer);
     }
 }
