@@ -116,6 +116,52 @@ impl Expr {
                             Ok(l)
                         }
                     }
+                    TokenType::EqualEqual => {
+                        let r = right.eval(env)?;
+
+                        Ok(Value::Bool(l == r))
+                    }
+                    TokenType::BangEqual => {
+                        let r = right.eval(env)?;
+
+                        Ok(Value::Bool(l != r))
+                    }
+                    TokenType::Lesser => {
+                        let r = right.eval(env)?;
+
+                        if l.get_type() != r.get_type() {
+                            return Err("PartialOrd for Different Types");
+                        }
+
+                        Ok(Value::Bool(l < r))
+                    }
+                    TokenType::LesserEqual => {
+                        let r = right.eval(env)?;
+
+                        if l.get_type() != r.get_type() {
+                            return Err("PartialOrd for Different Types");
+                        }
+
+                        Ok(Value::Bool(l <= r))
+                    }
+                    TokenType::Greater => {
+                        let r = right.eval(env)?;
+
+                        if l.get_type() != r.get_type() {
+                            return Err("PartialOrd for Different Types");
+                        }
+
+                        Ok(Value::Bool(l > r))
+                    }
+                    TokenType::GreaterEqual => {
+                        let r = right.eval(env)?;
+
+                        if l.get_type() != r.get_type() {
+                            return Err("PartialOrd for Different Types");
+                        }
+
+                        Ok(Value::Bool(l >= r))
+                    }
                     TokenType::Plus => {
                         let r = right.eval(env)?;
 

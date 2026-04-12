@@ -20,7 +20,7 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_type(self) -> Types {
+    pub fn get_type(&self) -> Types {
         match self {
             Value::Bool(_) => Types::Bool,
             Value::Number(_) => Types::Number,

@@ -4,12 +4,12 @@ use crate::parser::types::Value;
 
 #[derive(Debug, Default, Clone)]
 pub struct Enviroment {
-    variables: RefCell<HashMap<String, Value>>,
+    variables: Rc<RefCell<HashMap<String, Value>>>,
     outer: Option<Rc<RefCell<Enviroment>>>,
 }
 
 impl Enviroment {
-    pub fn define_var(self, identifier: &str, val: Value) {
+    pub fn define_var(&self, identifier: &str, val: Value) {
         self.variables
             .borrow_mut()
             .insert(identifier.to_string(), val);
