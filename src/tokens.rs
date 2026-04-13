@@ -11,8 +11,8 @@ impl Token {
         Token { token_type, line }
     }
 
-    pub fn as_token_type(self) -> TokenType {
-        self.token_type
+    pub fn get_token_type(&self) -> TokenType {
+        self.token_type.clone()
     }
 }
 
@@ -118,7 +118,7 @@ impl Display for TokenType {
             TokenType::CommentStarter => write!(f, "//"),
             TokenType::DotDot => write!(f, ".."),
 
-            TokenType::Identifier(name) => write!(f, "identifier({})", name),
+            TokenType::Identifier(name) => write!(f, "{}", name),
             TokenType::ExposedFunction(name) => write!(f, "exposed_fn({})", name),
             TokenType::String(s) => write!(f, "\"{}\"", s),
             TokenType::Number(n) => write!(f, "{}", n),

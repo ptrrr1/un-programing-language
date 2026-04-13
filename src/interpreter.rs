@@ -115,7 +115,7 @@ impl Interpreter {
                         // println!(":: {:#?}", &tokens);
 
                         let parser_result = Parser::parse_tokens(tokens);
-                        // println!(":: {:#?}", &parser_result);
+                        println!(":: {:#?}", &parser_result);
 
                         if parser_result.has_err() {
                             // println!("{:#?}", parser_result.into_err());
@@ -125,6 +125,8 @@ impl Interpreter {
                                 .for_each(|e| println!("{}", e));
                             continue;
                         }
+
+                        // TODO: In case no err, add stmt to vec! and run them
                     }
                 }
                 Err(e) if e.kind() == io::ErrorKind::Interrupted => break,

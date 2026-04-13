@@ -1,0 +1,14 @@
+// Non inclusive
+for i in [0..<5] do
+	print(i);
+end
+
+// Uses alphabetic
+for i in ["a"..<"aaaaaaaa"; i] do
+	print(i);
+end
+
+// Notation is a weird mix of C style and range operator '..'
+for i in [10..>0;-3] do
+	print(i);
+end

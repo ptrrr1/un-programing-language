@@ -103,6 +103,7 @@ impl Parser {
                 TokenType::Print => Self::print_stmt(tokens),
                 TokenType::If => Self::conditional_stmt(tokens),
                 TokenType::While => Self::while_stmt(tokens),
+                TokenType::For => Self::for_stmt(tokens),
                 TokenType::Begin => {
                     // According to the book, this will be reused for functions!
                     let _begin = tokens.next().unwrap(); // I know next is BEGIN
@@ -217,6 +218,81 @@ impl Parser {
         )?;
 
         Ok(Stmt::while_stmt(condition, stmts))
+    }
+
+    fn for_stmt<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        let _for = tokens.next().unwrap();
+
+        let identifier = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Identifier(_)),
+            ParserError::UnterminatedBlock, // TODO: Actual Err
+        )?;
+
+        Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::In),
+            ParserError::UnterminatedBlock, // TODO: Actual Err
+        )?;
+
+        // TODO: parse range in a helper function
+
+        Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::LeftBracket),
+            ParserError::UnterminatedBlock, // TODO: Actual Err
+        )?;
+
+        let start = Self::or(tokens)?;
+
+        Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::DotDot),
+            ParserError::UnterminatedBlock, // TODO: Actual Err
+        )?;
+
+        let condition = Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Lesser | TokenType::Greater),
+            ParserError::UnterminatedBlock, // TODO: Actual Err
+        )?;
+
+        let end = Self::or(tokens)?;
+
+        let mut step: Option<Expr> = None;
+
+        if tokens
+            .next_if(|t| matches!(t.token_type, TokenType::Semicolon))
+            .is_some()
+        {
+            step = Some(Self::or(tokens)?);
+        }
+
+        Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::RightBracket),
+            ParserError::UnterminatedBlock, // TODO: Actual Err
+        )?;
+
+        Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::Do),
+            ParserError::UnterminatedBlock, // TODO: Actual Err
+        )?;
+
+        let stmts = Self::block_helper(tokens, &|t| !matches!(t.token_type, TokenType::End))?;
+
+        Self::consume(
+            tokens,
+            |t| matches!(t, TokenType::End),
+            ParserError::UnterminatedBlock,
+        )?;
+
+        Ok(Stmt::for_stmt(
+            identifier, start, end, step, condition, stmts,
+        ))
     }
 
     fn block<I: Iterator<Item = Token>>(

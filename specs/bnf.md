@@ -18,7 +18,7 @@ STATEMENT ::= EXPR_STATEMENT
               | WHILE
               | FOR
 
-FOR ::= "for" IDENTIFIER "in" "[" NUMBER  ".." NUMBER ";" NUMBER "]" "do" DECLARATION* "end"
+FOR ::= "for" IDENTIFIER "in" "[" OR ".." ( "<" | ">" )  OR ( ";" OR )? "]" "do" DECLARATION* "end"
 
 WHILE ::= "while" OR "do" DECLARATION* "end"
 

@@ -249,7 +249,7 @@ impl Expr {
             } => {
                 let c = condition.eval(env.clone())?;
                 if c.get_truthyness() {
-                    true_case.eval(env)
+                    true_case.eval(env.clone())
                 } else {
                     false_case.eval(env.clone())
                 }

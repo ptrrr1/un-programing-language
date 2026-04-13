@@ -25,13 +25,14 @@ pub enum Stmt {
         condition: Expr,
         stmts: Vec<Stmt>,
     },
-    // For {
-    //     identifier: Token,
-    //     start: i64,
-    //     end: i64,
-    //     step: i64,
-    //     stmts: Vec<Stmt>
-    // }
+    For {
+        identifier: Token,
+        start: Expr,
+        end: Expr,
+        step: Expr,
+        condition: Token,
+        stmts: Vec<Stmt>,
+    },
 }
 
 impl Stmt {
@@ -67,6 +68,30 @@ impl Stmt {
         Self::While { condition, stmts }
     }
 
+    pub fn for_stmt(
+        identifier: Token,
+        start: Expr,
+        end: Expr,
+        step: Option<Expr>,
+        condition: Token,
+        stmts: Vec<Stmt>,
+    ) -> Self {
+        let s = match step {
+            Some(t) => t,
+            // TODO: Find the position I guess...
+            None => Expr::literal(Token::new(TokenType::Number(1.0), (0, 0))),
+        };
+
+        Self::For {
+            identifier,
+            start,
+            end,
+            step: s,
+            condition,
+            stmts,
+        }
+    }
+
     pub fn eval(&self, env: Rc<RefCell<Enviroment>>) -> Result<(), &'static str> {
         match self {
             Stmt::Expr(expr) => {
@@ -84,7 +109,7 @@ impl Stmt {
                 TokenType::Identifier(s) => {
                     let val = expr.eval(env.clone())?;
                     env.borrow_mut().clone().define_var(s, val);
-                    dbg!(env);
+
                     Ok(())
                 }
                 _ => unreachable!(),
@@ -127,6 +152,36 @@ impl Stmt {
                     }
                 }
                 Ok(())
+            }
+
+            Stmt::For {
+                identifier,
+                start,
+                end,
+                step,
+                condition,
+                stmts,
+            } => {
+                let var_decl = Self::var(identifier.clone(), start.clone());
+
+                let var = Expr::variable(identifier.clone());
+                let st = Self::expr(Expr::assignment(
+                    var.clone(),
+                    Expr::binary(var, Token::new(TokenType::Plus, (0, 0)), step.clone()),
+                ));
+
+                let mut stmts_cl = stmts.clone();
+                stmts_cl.push(st);
+
+                let condition = Expr::binary(
+                    Expr::variable(identifier.clone()),
+                    condition.clone(),
+                    end.clone(),
+                );
+
+                let while_stmt = Self::while_stmt(condition, stmts_cl);
+
+                Self::block(vec![var_decl, while_stmt]).eval(env)
             }
         }
     }
