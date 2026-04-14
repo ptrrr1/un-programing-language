@@ -5,7 +5,6 @@ use std::{
 };
 
 use interpreter::Interpreter;
-use un_std::math_globals;
 
 pub mod enviroment;
 pub mod errors;
@@ -16,7 +15,8 @@ pub mod tokens;
 pub mod un_std;
 
 fn main() -> io::Result<()> {
-    let interpreter = Interpreter::with_exposed(math_globals());
+    let interpreter = Interpreter::default();
+    // let interpreter = Interpreter::with_exposed(un_std::globals());
 
     let args: Vec<String> = env::args().skip(1).collect();
     match args.len() {

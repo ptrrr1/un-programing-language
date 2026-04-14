@@ -294,11 +294,13 @@ impl Expr {
 
                 match eval_callee {
                     Value::Callee(f) => {
-                        if f.arity() != eval_args.len() {
-                            panic!("Wrong number of arguments") // TODO: Expand err
+                        if f.arity() == eval_args.len()
+                            || f.arity() >= eval_args.len() && f.is_variable_arity()
+                        {
+                            return f.call(eval_args);
                         }
 
-                        f.call(eval_args)
+                        panic!("Wrong number of arguments") // TODO: Expand err
                     }
                     _ => panic!("Can only call functions"),
                 }

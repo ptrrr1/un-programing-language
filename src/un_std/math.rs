@@ -1,9 +1,21 @@
 use std::rc::Rc;
 
-use crate::parser::{
-    callable::{Callable, ExposedCallable},
-    types::Value,
+use crate::{
+    enviroment::Enviroment,
+    parser::{
+        callable::{Callable, ExposedCallable},
+        types::Value,
+    },
 };
+
+pub fn math_globals() -> Enviroment {
+    let math_globals = Enviroment::default();
+
+    let (name, ret_val) = Mod::definition();
+    math_globals.define_var(&name, ret_val);
+
+    math_globals
+}
 
 #[derive(Debug)]
 pub struct Mod;
@@ -22,6 +34,10 @@ impl Callable for Mod {
 
     fn arity(&self) -> usize {
         2
+    }
+
+    fn is_variable_arity(&self) -> bool {
+        false
     }
 }
 
