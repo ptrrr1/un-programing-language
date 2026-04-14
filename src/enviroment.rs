@@ -27,12 +27,12 @@ impl Enviroment {
         None
     }
 
-    pub fn update_var(&self, identifier: &str, val: Value) -> Result<(), &'static str> {
+    pub fn update_var(&self, identifier: &str, val: Value) -> Option<Value> {
         if self.variables.borrow().contains_key(identifier) {
-            self.variables
+            return self
+                .variables
                 .borrow_mut()
                 .insert(identifier.to_string(), val);
-            return Ok(());
         }
 
         if let Some(outer) = self.outer.as_ref() {
@@ -40,7 +40,7 @@ impl Enviroment {
         }
 
         // Variable doesn't exist anywhere
-        Err("Undefined variable")
+        panic!("Undefined variable")
     }
 
     pub fn set_outer(&mut self, outer: Rc<RefCell<Enviroment>>) {

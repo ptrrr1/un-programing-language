@@ -75,20 +75,20 @@ impl Expr {
         }
     }
 
-    pub fn eval(&self, env: Rc<RefCell<Enviroment>>) -> Result<Value, &'static str> {
+    pub fn eval(&self, env: Rc<RefCell<Enviroment>>) -> Value {
         match self {
             Expr::Assignment { target, expr } => {
-                let val = expr.eval(env.clone())?;
+                let val = expr.eval(env.clone());
 
                 match target.as_ref() {
                     Expr::Variable(token) => match &token.token_type {
                         TokenType::Identifier(s) => {
-                            env.borrow().clone().update_var(s, val.clone())?;
-                            Ok(val)
+                            env.borrow().clone().update_var(s, val.clone());
+                            val
                         }
                         _ => unreachable!(),
                     },
-                    _ => Err("Invalid assignment target"),
+                    _ => panic!("Invalid assignment target"),
                 }
             }
 
@@ -97,119 +97,119 @@ impl Expr {
                 operator,
                 right,
             } => {
-                let l = left.eval(env.clone())?;
+                let l = left.eval(env.clone());
 
                 match operator.token_type {
                     TokenType::Or => {
                         if l.get_truthyness() {
-                            Ok(l)
+                            l
                         } else {
-                            let r = right.eval(env.clone())?;
-                            Ok(r)
+                            right.eval(env.clone())
                         }
                     }
                     TokenType::And => {
                         if l.get_truthyness() {
-                            let r = right.eval(env)?;
-                            Ok(r)
+                            right.eval(env)
                         } else {
-                            Ok(l)
+                            l
                         }
                     }
                     TokenType::EqualEqual => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
-                        Ok(Value::Bool(l == r))
+                        Value::Bool(l == r)
                     }
                     TokenType::BangEqual => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
-                        Ok(Value::Bool(l != r))
+                        Value::Bool(l != r)
                     }
                     TokenType::Lesser => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         if l.get_type() != r.get_type() {
-                            return Err("PartialOrd for Different Types");
+                            panic!("PartialOrd for Different Types");
                         }
 
-                        Ok(Value::Bool(l < r))
+                        Value::Bool(l < r)
                     }
                     TokenType::LesserEqual => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         if l.get_type() != r.get_type() {
-                            return Err("PartialOrd for Different Types");
+                            panic!("PartialOrd for Different Types");
                         }
 
-                        Ok(Value::Bool(l <= r))
+                        Value::Bool(l <= r)
                     }
                     TokenType::Greater => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         if l.get_type() != r.get_type() {
-                            return Err("PartialOrd for Different Types");
+                            panic!("PartialOrd for Different Types");
                         }
 
-                        Ok(Value::Bool(l > r))
+                        Value::Bool(l > r)
                     }
                     TokenType::GreaterEqual => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         if l.get_type() != r.get_type() {
-                            return Err("PartialOrd for Different Types");
+                            panic!("PartialOrd for Different Types");
                         }
 
-                        Ok(Value::Bool(l >= r))
+                        Value::Bool(l >= r)
                     }
                     TokenType::Plus => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         match (l, r) {
                             (Value::Number(left), Value::Number(right)) => {
-                                Ok(Value::Number(left + right))
+                                Value::Number(left + right)
                             }
                             (Value::String(left), Value::String(right)) => {
-                                Ok(Value::String(left + &right))
+                                Value::String(left + &right)
                             }
-                            _ => Err(
+                            _ => panic!(
                                 "Invalid Type for Binary Operation 'Addition', Expected only Number or String",
                             ),
                         }
                     }
                     TokenType::Minus => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         match (l, r) {
                             (Value::Number(left), Value::Number(right)) => {
-                                Ok(Value::Number(left - right))
+                                Value::Number(left - right)
                             }
-                            _ => Err(
+                            _ => panic!(
                                 "Invalid Type for Binary Operation 'Subtraction', Expected Number",
                             ),
                         }
                     }
                     TokenType::Star => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         match (l, r) {
                             (Value::Number(left), Value::Number(right)) => {
-                                Ok(Value::Number(left * right))
+                                Value::Number(left * right)
                             }
-                            _ => Err(
+                            _ => panic!(
                                 "Invalid Type for Binary Operation 'Multiplication', Expected Number",
                             ),
                         }
                     }
                     TokenType::Slash => {
-                        let r = right.eval(env)?;
+                        let r = right.eval(env);
 
                         match (l, r) {
                             (Value::Number(left), Value::Number(right)) => {
-                                Ok(Value::Number(left / right))
+                                Value::Number(left / right)
                             }
                             _ => {
-                                Err("Invalid Type for Binary Operation 'Division', Expected Number")
+                                panic!(
+                                    "Invalid Type for Binary Operation 'Division', Expected Number"
+                                )
                             }
                         }
                     }
@@ -218,26 +218,26 @@ impl Expr {
             }
 
             Expr::Unary { operator, right } => {
-                let r = right.eval(env)?;
+                let r = right.eval(env);
 
                 match operator.token_type {
                     TokenType::Minus => match r {
-                        Value::Number(v) => Ok(Value::Number(-v)),
-                        _ => Err("Invalid Type for Unary, Expected Number"),
+                        Value::Number(v) => Value::Number(-v),
+                        _ => panic!("Invalid Type for Unary, Expected Number"),
                     },
-                    TokenType::Not => Ok(Value::Bool(!r.get_truthyness())),
+                    TokenType::Not => Value::Bool(!r.get_truthyness()),
                     _ => unreachable!(),
                 }
             }
 
             Expr::Grouping(expr) => expr.eval(env),
 
-            Expr::Literal(token) => Value::try_from(token.token_type.clone()),
+            Expr::Literal(token) => Value::try_from(token.token_type.clone()).unwrap(),
 
             Expr::Variable(token) => match token.token_type.clone() {
                 TokenType::Identifier(s) => match env.borrow().get_var_val(&s) {
-                    Some(v) => Ok(v),
-                    None => Err("Undefined Variable"),
+                    Some(v) => v,
+                    None => panic!("Undefined Variable"),
                 },
                 _ => unreachable!(),
             },
@@ -247,7 +247,7 @@ impl Expr {
                 true_case,
                 false_case,
             } => {
-                let c = condition.eval(env.clone())?;
+                let c = condition.eval(env.clone());
                 if c.get_truthyness() {
                     true_case.eval(env.clone())
                 } else {

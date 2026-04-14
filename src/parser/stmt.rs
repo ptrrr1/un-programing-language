@@ -92,29 +92,30 @@ impl Stmt {
         }
     }
 
-    pub fn eval(&self, env: Rc<RefCell<Enviroment>>) -> Result<(), &'static str> {
+    // TODO: When encountering an Erro, crash!!!!!
+    pub fn eval(&self, env: Rc<RefCell<Enviroment>>) {
         match self {
             Stmt::Expr(expr) => {
-                expr.eval(env)?;
-                Ok(())
+                expr.eval(env);
+                
             }
 
             Stmt::Print(expr) => {
-                println!("{}", expr.eval(env)?);
+                println!("{}", expr.eval(env));
 
-                Ok(())
+                
             }
 
             Stmt::Var { target, expr } => match target {
                 Expr::Variable(t) => {
                     if let TokenType::Identifier(s) = &t.token_type {
-                        let val = expr.eval(env.clone())?;
+                        let val = expr.eval(env.clone());
                         env.borrow_mut().clone().define_var(s, val);
                     }
 
-                    Ok(())
+                    
                 }
-                _ => Err("Invalid target for variable"),
+                _ => panic!("Invalid target for variable"),
             },
 
             Stmt::Block(stmts) => {
@@ -122,10 +123,10 @@ impl Stmt {
                 new_env.borrow_mut().set_outer(env);
 
                 for stmt in stmts {
-                    stmt.eval(new_env.clone())?;
+                    stmt.eval(new_env.clone());
                 }
 
-                Ok(())
+                
             }
 
             Stmt::Conditional {
@@ -133,27 +134,27 @@ impl Stmt {
                 true_branch,
                 false_branch,
             } => {
-                let c = condition.eval(env.clone())?;
+                let c = condition.eval(env.clone());
                 if c.get_truthyness() {
                     for stmt in true_branch {
-                        stmt.eval(env.clone())?;
+                        stmt.eval(env.clone());
                     }
                 } else if let Some(f) = false_branch {
                     for stmt in f {
-                        stmt.eval(env.clone())?;
+                        stmt.eval(env.clone());
                     }
                 }
 
-                Ok(())
+                
             }
 
             Stmt::While { condition, stmts } => {
-                while condition.eval(env.clone())?.get_truthyness() {
+                while condition.eval(env.clone()).get_truthyness() {
                     for stmt in stmts {
-                        stmt.eval(env.clone())?;
+                        stmt.eval(env.clone());
                     }
                 }
-                Ok(())
+                
             }
 
             Stmt::For {

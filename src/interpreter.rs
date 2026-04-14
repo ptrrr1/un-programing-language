@@ -55,13 +55,7 @@ impl Interpreter {
         // dbg!(&parser_result);
 
         for stmt in parser_result.into_stmt() {
-            let r = stmt.eval(self.env.clone());
-            match r {
-                Ok(_) => {}
-                Err(e) => {
-                    dbg!(e);
-                }
-            }
+            stmt.eval(self.env.clone());
         }
 
         Ok(())
