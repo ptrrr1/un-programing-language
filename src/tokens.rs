@@ -65,7 +65,6 @@ pub enum TokenType {
     String(String),
     Number(f64),
 
-    // TODO: Add type keywords: string, number and bool
     // Keywords
     Not,
     And,

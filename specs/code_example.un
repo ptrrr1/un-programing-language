@@ -79,7 +79,6 @@ end
 // For loops use a unique syntax
 // [i..k;s] Reads as follows:
 // Starting at i, add s until i >= k
-// TODO: Define bahavior when numbers aren't Int
 // TODO: Evaluate if loop will run infinitely and throw err
 // Should be easy taking into account s and k - i
 

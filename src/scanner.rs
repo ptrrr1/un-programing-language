@@ -80,8 +80,6 @@ impl Scanner {
 
         let mut seen_dot = false;
 
-        // TODO: use chars.peek() instead for the loop, makes it easier to reprocess
-        // but i'll likely lose the lookahead feature
         while let Some((pos_h, char)) = chars.next() {
             match state {
                 States::Start => match char {

@@ -1,7 +1,7 @@
 // if 2 == 3 then 4 else 5 end;
 // let x := if 2 == 3 then 4 else 5 end;
 // x = if 4 == 5 then 6 else 7 end;
-y = if 1 == 2
+let y := if 1 == 2
 	then 3
 	else if 4 == 5
 		then 6

@@ -10,53 +10,53 @@ use super::types::Value;
 #[derive(Debug, Clone)]
 pub enum Expr {
     Assignment {
-        target: Box<Expr>,
-        expr: Box<Expr>,
+        target: Rc<Expr>,
+        expr: Rc<Expr>,
     },
     Binary {
-        left: Box<Expr>,
+        left: Rc<Expr>,
         operator: Token,
-        right: Box<Expr>,
+        right: Rc<Expr>,
     },
     Unary {
         operator: Token,
-        right: Box<Expr>,
+        right: Rc<Expr>,
     },
-    Grouping(Box<Expr>),
+    Grouping(Rc<Expr>),
     Literal(Token),
     Variable(Token),
     Conditional {
-        condition: Box<Expr>,
-        true_case: Box<Expr>,
-        false_case: Box<Expr>,
+        condition: Rc<Expr>,
+        true_case: Rc<Expr>,
+        false_case: Rc<Expr>,
     },
 }
 
 impl Expr {
     pub fn assignment(target: Expr, expr: Expr) -> Expr {
         Expr::Assignment {
-            target: Box::new(target),
-            expr: Box::new(expr),
+            target: Rc::new(target),
+            expr: Rc::new(expr),
         }
     }
 
     pub fn binary(left: Expr, op: Token, right: Expr) -> Expr {
         Expr::Binary {
-            left: Box::new(left),
+            left: Rc::new(left),
             operator: op,
-            right: Box::new(right),
+            right: Rc::new(right),
         }
     }
 
     pub fn unary(op: Token, right: Expr) -> Expr {
         Expr::Unary {
             operator: op,
-            right: Box::new(right),
+            right: Rc::new(right),
         }
     }
 
     pub fn grouping(expr: Expr) -> Expr {
-        Expr::Grouping(Box::new(expr))
+        Expr::Grouping(Rc::new(expr))
     }
 
     pub fn literal(token: Token) -> Expr {
@@ -69,9 +69,9 @@ impl Expr {
 
     pub fn conditional(condition: Expr, true_case: Expr, false_case: Expr) -> Expr {
         Expr::Conditional {
-            condition: Box::new(condition),
-            true_case: Box::new(true_case),
-            false_case: Box::new(false_case),
+            condition: Rc::new(condition),
+            true_case: Rc::new(true_case),
+            false_case: Rc::new(false_case),
         }
     }
 
