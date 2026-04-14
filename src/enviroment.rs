@@ -9,6 +9,13 @@ pub struct Enviroment {
 }
 
 impl Enviroment {
+    pub fn with_outer(env: Enviroment) -> Self {
+        Enviroment {
+            variables: Rc::new(RefCell::new(HashMap::new())),
+            outer: Some(Rc::new(RefCell::new(env))),
+        }
+    }
+
     pub fn define_var(&self, identifier: &str, val: Value) {
         self.variables
             .borrow_mut()

@@ -1,5 +1,5 @@
 use core::fmt;
-use std::fmt::Display;
+use std::{fmt::Display, rc::Rc};
 
 use crate::tokens::TokenType;
 
@@ -16,6 +16,7 @@ pub enum Value {
     Bool(bool),
     Number(f64),
     String(String),
+    Callee(Rc<dyn super::callable::Callable>),
     Nil,
 }
 
@@ -25,7 +26,7 @@ impl Value {
             Value::Bool(_) => Types::Bool,
             Value::Number(_) => Types::Number,
             Value::String(_) => Types::String,
-            Value::Nil => Types::Nil,
+            /* Value::Nil */ _ => Types::Nil,
         }
     }
 
@@ -34,7 +35,7 @@ impl Value {
             Value::Bool(v) => *v,
             Value::Number(v) => !(*v == 0.0),
             Value::String(v) => !v.is_empty(),
-            Value::Nil => false,
+            /* Value::Nil */ _ => false,
         }
     }
 }
@@ -71,7 +72,7 @@ impl Display for Value {
             Value::Bool(v) => write!(f, "{v}"),
             Value::Number(v) => write!(f, "{v}"),
             Value::String(v) => write!(f, "{v}"),
-            Value::Nil => write!(f, "Nil"),
+            /* Value::Nil */ _ => write!(f, "Nil"),
         }
     }
 }

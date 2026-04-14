@@ -97,13 +97,10 @@ impl Stmt {
         match self {
             Stmt::Expr(expr) => {
                 expr.eval(env);
-                
             }
 
             Stmt::Print(expr) => {
                 println!("{}", expr.eval(env));
-
-                
             }
 
             Stmt::Var { target, expr } => match target {
@@ -112,8 +109,6 @@ impl Stmt {
                         let val = expr.eval(env.clone());
                         env.borrow_mut().clone().define_var(s, val);
                     }
-
-                    
                 }
                 _ => panic!("Invalid target for variable"),
             },
@@ -125,8 +120,6 @@ impl Stmt {
                 for stmt in stmts {
                     stmt.eval(new_env.clone());
                 }
-
-                
             }
 
             Stmt::Conditional {
@@ -144,8 +137,6 @@ impl Stmt {
                         stmt.eval(env.clone());
                     }
                 }
-
-                
             }
 
             Stmt::While { condition, stmts } => {
@@ -154,7 +145,6 @@ impl Stmt {
                         stmt.eval(env.clone());
                     }
                 }
-                
             }
 
             Stmt::For {

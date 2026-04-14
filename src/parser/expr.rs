@@ -25,10 +25,16 @@ pub enum Expr {
     Grouping(Rc<Expr>),
     Literal(Token),
     Variable(Token),
+    ExposedFn(Token),
     Conditional {
         condition: Rc<Expr>,
         true_case: Rc<Expr>,
         false_case: Rc<Expr>,
+    },
+    Call {
+        callee: Rc<Expr>,
+        paren: Token,
+        args: Vec<Expr>,
     },
 }
 
@@ -67,11 +73,23 @@ impl Expr {
         Expr::Variable(token)
     }
 
+    pub fn exposed_fn(token: Token) -> Expr {
+        Expr::ExposedFn(token)
+    }
+
     pub fn conditional(condition: Expr, true_case: Expr, false_case: Expr) -> Expr {
         Expr::Conditional {
             condition: Rc::new(condition),
             true_case: Rc::new(true_case),
             false_case: Rc::new(false_case),
+        }
+    }
+
+    pub fn callable(callee: Expr, paren: Token, args: Vec<Expr>) -> Expr {
+        Expr::Call {
+            callee: Rc::new(callee),
+            paren,
+            args,
         }
     }
 
@@ -242,6 +260,13 @@ impl Expr {
                 _ => unreachable!(),
             },
 
+            Expr::ExposedFn(token) => match token.token_type.clone() {
+                TokenType::ExposedFunction(s) => match env.borrow().get_var_val(&s) {
+                    Some(v) => v,
+                    None => panic!("Undefined Variable"),
+                },
+                _ => unreachable!(),
+            },
             Expr::Conditional {
                 condition,
                 true_case,
@@ -252,6 +277,30 @@ impl Expr {
                     true_case.eval(env.clone())
                 } else {
                     false_case.eval(env.clone())
+                }
+            }
+
+            Expr::Call {
+                callee,
+                paren,
+                args,
+            } => {
+                let eval_callee = callee.eval(env.clone());
+
+                let mut eval_args: Vec<Value> = vec![];
+                for arg in args {
+                    eval_args.push(arg.eval(env.clone()));
+                }
+
+                match eval_callee {
+                    Value::Callee(f) => {
+                        if f.arity() != eval_args.len() {
+                            panic!("Wrong number of arguments") // TODO: Expand err
+                        }
+
+                        f.call(eval_args)
+                    }
+                    _ => panic!("Can only call functions"),
                 }
             }
         }

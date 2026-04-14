@@ -8,6 +8,7 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
+pub mod callable;
 pub mod expr;
 pub mod stmt;
 pub mod types;
@@ -374,7 +375,61 @@ impl Parser {
             return Ok(Expr::unary(op.clone(), expr_r));
         }
 
-        Self::primary(tokens)
+        Self::call(tokens)
+    }
+
+    fn call<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        let mut callee = Self::primary(tokens)?;
+
+        while tokens
+            .next_if(|t| matches!(t.token_type, TokenType::LeftParenthesis))
+            .is_some()
+        {
+            let (paren, args) = Self::finish_call(tokens)?;
+            callee = Expr::callable(callee, paren, args);
+        }
+
+        Ok(callee)
+    }
+
+    fn finish_call<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<(Token, Vec<Expr>), Error<ParserError>> {
+        let mut args: Vec<Expr> = vec![];
+        if tokens
+            .peek()
+            .is_some_and(|t| !matches!(t.token_type, TokenType::RightParenthesis))
+        {
+            // Makeshift do while Loop
+            loop {
+                if args.len() >= 255 {
+                    // TODO: Actual Err + Position
+                    // TODO: Find a better way to do this
+                    // Book says not to synchronize, just report
+                    return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
+                    // eprintln!("Can't have more than 255 args");
+                }
+                args.push(Self::or(tokens)?);
+
+                if tokens
+                    .next_if(|t| matches!(t.token_type, TokenType::Comma))
+                    .is_none()
+                {
+                    break;
+                }
+            }
+        }
+
+        // TODO: Fix err
+        let paren = Self::consume(
+            tokens,
+            vec![TokenType::RightParenthesis],
+            ParserError::UnclosedExpr,
+        )?;
+
+        Ok((paren, args))
     }
 
     fn primary<I: Iterator<Item = Token>>(
@@ -408,6 +463,11 @@ impl Parser {
             )
         }) {
             return Ok(Expr::literal(t));
+        }
+
+        // Exposed Fn
+        if let Some(t) = tokens.next_if(|t| matches!(t.token_type, TokenType::ExposedFunction(_))) {
+            return Ok(Expr::exposed_fn(t));
         }
 
         // Identifier
@@ -456,7 +516,7 @@ impl Parser {
     fn synchronize<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) {
         while let Some(t) = tokens.peek() {
             match t.token_type {
-                TokenType::Semicolon => {
+                TokenType::Semicolon | TokenType::RightParenthesis => {
                     tokens.next();
                     break;
                 }

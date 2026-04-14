@@ -9,12 +9,18 @@ use std::{
 
 use crate::{enviroment::Enviroment, parser::Parser, scanner::Scanner, tokens::TokenType};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Interpreter {
     env: Rc<RefCell<Enviroment>>,
 }
 
 impl Interpreter {
+    pub fn with_exposed(env: Enviroment) -> Self {
+        Interpreter {
+            env: Rc::new(RefCell::new(Enviroment::with_outer(env))),
+        }
+    }
+
     pub fn run_file(&self, file_path: &String) -> io::Result<()> {
         let file_path = Path::new(file_path);
         let mut buffer = Self::read_file(file_path).unwrap_or_else(|err| {

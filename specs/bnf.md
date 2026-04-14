@@ -53,6 +53,10 @@ FACTOR ::= UNARY ( ( "/" | "*" ) UNARY )\*
 
 UNARY ::= ( "not" | "-" ) UNARY | PRIMARY
 
+CALL ::= PRIMARY ( "(" ARGUMENTS?  ")" )*
+
+ARGUMENTS ::= OR ( "," OR )*
+
 PRIMARY ::= LITERAL
           | STRING
           | BOOL
