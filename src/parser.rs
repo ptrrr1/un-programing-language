@@ -172,6 +172,7 @@ impl Parser {
                 TokenType::If => Self::conditional_stmt(tokens),
                 TokenType::While => Self::while_stmt(tokens),
                 TokenType::For => Self::for_stmt(tokens),
+                TokenType::Return => Self::return_stmt(tokens),
                 TokenType::Begin => {
                     // According to the book, this will be reused for functions!
                     let _begin = tokens.next().unwrap(); // I know next is BEGIN
@@ -292,6 +293,29 @@ impl Parser {
         Ok(Stmt::for_stmt(
             identifier, start, end, step, condition, stmts,
         ))
+    }
+
+    fn return_stmt<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        let _ret = tokens.next().unwrap();
+
+        if tokens
+            .next_if(|t| matches!(t.token_type, TokenType::Semicolon))
+            .is_some()
+        {
+            return Ok(Stmt::return_stmt(None));
+        }
+
+        let expr = Self::or(tokens)?;
+
+        Self::consume(
+            tokens,
+            vec![TokenType::Semicolon],
+            ParserError::UnterminatedStmt,
+        )?;
+
+        Ok(Stmt::return_stmt(Some(expr)))
     }
 
     fn block<I: Iterator<Item = Token>>(

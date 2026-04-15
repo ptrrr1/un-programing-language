@@ -38,6 +38,7 @@ pub enum Stmt {
         params: Vec<Token>,
         body: Rc<Stmt>,
     },
+    Return(Expr),
 }
 
 impl Stmt {
@@ -102,6 +103,14 @@ impl Stmt {
             identifier,
             params,
             body: Rc::new(body),
+        }
+    }
+
+    pub fn return_stmt(expr: Option<Expr>) -> Self {
+        match expr {
+            Some(e) => Self::Return(e),
+            // TODO: Fix position
+            None => Self::Return(Expr::literal(Token::new(TokenType::Nil, (0, 0)))),
         }
     }
 
@@ -202,6 +211,8 @@ impl Stmt {
                 }
                 _ => panic!("Not an identifier for a function"),
             },
+
+            Stmt::Return(expr) => todo!(), // return Err with RetunValue of Return
         }
     }
 }

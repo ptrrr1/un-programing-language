@@ -24,6 +24,9 @@ STATEMENT ::= EXPR_STATEMENT
               | IF
               | WHILE
               | FOR
+              | RETURN
+
+RETURN ::= "return" OR? ";"
 
 FOR ::= "for" IDENTIFIER "in" "[" OR ".." ( "<" | ">" )  OR ( ";" OR )? "]" "do" DECLARATION* "end"
 
