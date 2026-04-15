@@ -1,0 +1,16 @@
+let x := 2;
+
+fun foo()
+begin
+	x = x + 2;
+	print("mutate");
+end
+
+fun bar(x)
+begin
+	print(x);
+end
+
+bar(x);
+foo();
+bar(x);

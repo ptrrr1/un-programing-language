@@ -59,6 +59,7 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         if let Some(t) = tokens.peek() {
             match t.token_type {
+                TokenType::Fun => Self::fun_declaration(tokens),
                 TokenType::Let => Self::var_declaration(tokens),
                 _ => Self::statement(tokens),
             }
@@ -67,12 +68,83 @@ impl Parser {
         }
     }
 
+    fn fun_declaration<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Stmt, Error<ParserError>> {
+        let _fun = tokens.next().unwrap(); // I know next is FUN
+        let mut params = Vec::new();
+
+        // TODO: Consume only Identifier
+        let identifier = match tokens.next_if(|t| matches!(t.token_type, TokenType::Identifier(_)))
+        {
+            Some(t) => t,
+            None => {
+                // TODO: FIX ERROR
+                return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
+            }
+        };
+
+        // TODO: FIX ERROR
+        Self::consume(
+            tokens,
+            vec![TokenType::LeftParenthesis],
+            ParserError::UnexpectedEOF,
+        )?;
+
+        // TODO: Move to function
+        if tokens
+            .peek()
+            .is_some_and(|t| !matches!(t.token_type, TokenType::RightParenthesis))
+        {
+            // Makeshift do while Loop
+            loop {
+                if params.len() >= 255 {
+                    // TODO: Actual Err + Position
+                    // TODO: Find a better way to do this
+                    // Book says not to synchronize, just report
+                    return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
+                    // eprintln!("Can't have more than 255 args");
+                }
+
+                match tokens.next_if(|t| matches!(t.token_type, TokenType::Identifier(_))) {
+                    Some(t) => params.push(t),
+                    None => {
+                        // TODO: FIX ERROR
+                        return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
+                    }
+                }
+
+                if tokens
+                    .next_if(|t| matches!(t.token_type, TokenType::Comma))
+                    .is_none()
+                {
+                    break;
+                }
+            }
+        }
+
+        // TODO: Fix err
+        Self::consume(
+            tokens,
+            vec![TokenType::RightParenthesis],
+            ParserError::UnclosedExpr,
+        )?;
+
+        // TODO: Fix err
+        Self::consume(tokens, vec![TokenType::Begin], ParserError::UnexpectedEOF)?;
+
+        let body = Stmt::block(Self::block(tokens)?);
+
+        Ok(Stmt::function(identifier, params, body))
+    }
+
     fn var_declaration<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Stmt, Error<ParserError>> {
         let _let = tokens.next().unwrap(); // I know next is LET
 
-        let identifer = Self::primary(tokens)?;
+        // TODO: Consume only Identifier
+        let identifier = Self::primary(tokens)?;
 
         Self::consume(
             tokens,
@@ -88,7 +160,7 @@ impl Parser {
             ParserError::UnterminatedStmt,
         )?;
 
-        Ok(Stmt::var(identifer, expr))
+        Ok(Stmt::var(identifier, expr))
     }
 
     fn statement<I: Iterator<Item = Token>>(
@@ -198,6 +270,7 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         let _for = tokens.next().unwrap();
 
+        // TODO: Consume only identifier
         let identifier = Self::primary(tokens)?;
 
         Self::consume(

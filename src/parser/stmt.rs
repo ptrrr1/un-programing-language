@@ -5,7 +5,7 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-use super::expr::Expr;
+use super::{callable::UnCallable, expr::Expr, types::Value};
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
@@ -32,6 +32,11 @@ pub enum Stmt {
         step: Expr,
         condition: Token,
         stmts: Vec<Stmt>,
+    },
+    Function {
+        identifier: Token,
+        params: Vec<Token>,
+        body: Rc<Stmt>,
     },
 }
 
@@ -89,6 +94,14 @@ impl Stmt {
             step: s,
             condition,
             stmts,
+        }
+    }
+
+    pub fn function(identifier: Token, params: Vec<Token>, body: Stmt) -> Self {
+        Self::Function {
+            identifier,
+            params,
+            body: Rc::new(body),
         }
     }
 
@@ -175,6 +188,20 @@ impl Stmt {
 
                 Self::block(vec![var_decl, while_stmt]).eval(env)
             }
+
+            Stmt::Function {
+                identifier,
+                params,
+                body,
+            } => match &identifier.token_type {
+                TokenType::Identifier(s) => {
+                    let un_callable = UnCallable::new(s.clone(), params.clone(), body.clone());
+                    let val = Value::Callee(Rc::new(un_callable));
+
+                    env.borrow_mut().define_var(s, val);
+                }
+                _ => panic!("Not an identifier for a function"),
+            },
         }
     }
 }

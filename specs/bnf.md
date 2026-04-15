@@ -2,8 +2,15 @@ PROGRAM ::= DECLARATION* EOF;
 
 <!-- Declarations  -->
 ```
-DECLARATION ::= VAR_DECL
-                | STATEMENT
+DECLARATION ::= FUNC_DECL
+              | VAR_DECL
+              | STATEMENT
+
+FUNC_DECL ::= "fun" FUNCTION
+
+FUNCTION ::= IDENTIFIER "(" PARAMETERS?  ")" BLOCK
+
+PARAMETERS ::= IDENTIFIER ( "," IDENTIFIER )*
 
 VAR_DECL ::= "let" IDENTIFIER ":=" EXPR ";"
 ```

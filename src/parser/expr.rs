@@ -297,7 +297,7 @@ impl Expr {
                         if f.arity() == eval_args.len()
                             || f.arity() >= eval_args.len() && f.is_variable_arity()
                         {
-                            return f.call(eval_args);
+                            return f.call(eval_args, env);
                         }
 
                         panic!("Wrong number of arguments") // TODO: Expand err

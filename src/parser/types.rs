@@ -72,7 +72,8 @@ impl Display for Value {
             Value::Bool(v) => write!(f, "{v}"),
             Value::Number(v) => write!(f, "{v}"),
             Value::String(v) => write!(f, "{v}"),
-            /* Value::Nil */ _ => write!(f, "Nil"),
+            Value::Callee(v) => write!(f, "{v}"),
+            Value::Nil => write!(f, "Nil"),
         }
     }
 }
