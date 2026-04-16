@@ -247,7 +247,8 @@ impl Stmt {
             } => {
                 match &identifier.token_type {
                     TokenType::Identifier(s) => {
-                        let un_callable = UnCallable::new(s.clone(), params.clone(), body.clone());
+                        let un_callable =
+                            UnCallable::new(s.clone(), params.clone(), body.clone(), env.clone());
                         let val = Value::Callee(Rc::new(un_callable));
 
                         env.borrow_mut().define_var(s, val);

@@ -12,7 +12,7 @@ use crate::{
 use super::{signal::Signal, stmt::Stmt, types::Value};
 
 pub trait Callable: Debug + Display {
-    fn call(&self, args: Vec<Value>, env: Rc<RefCell<Enviroment>>) -> Value;
+    fn call(&self, args: Vec<Value>) -> Value;
     fn arity(&self) -> usize;
     fn is_variable_arity(&self) -> bool;
 }
@@ -26,22 +26,29 @@ pub struct UnCallable {
     identifier: String,
     params: Vec<Token>,
     body: Vec<Stmt>,
+    env: Rc<RefCell<Enviroment>>,
 }
 
 impl UnCallable {
-    pub fn new(identifier: String, params: Vec<Token>, body: Vec<Stmt>) -> Self {
+    pub fn new(
+        identifier: String,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+        env: Rc<RefCell<Enviroment>>,
+    ) -> Self {
         Self {
             identifier,
             params,
             body,
+            env,
         }
     }
 }
 
 impl Callable for UnCallable {
-    fn call(&self, args: Vec<Value>, env: Rc<RefCell<Enviroment>>) -> Value {
+    fn call(&self, args: Vec<Value>) -> Value {
         let mut new_env = Enviroment::default();
-        new_env.set_outer(env.clone());
+        new_env.set_outer(self.env.clone());
 
         for (param, arg) in self.params.iter().zip(args) {
             if let TokenType::Identifier(s) = &param.token_type {
