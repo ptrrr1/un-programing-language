@@ -12,7 +12,7 @@ pub enum Stmt {
     Expr(Expr),
     Print(Expr),
     Var {
-        target: Expr,
+        target: Token,
         expr: Expr,
     },
     Block(Vec<Stmt>),
@@ -26,7 +26,7 @@ pub enum Stmt {
         stmts: Vec<Stmt>,
     },
     For {
-        identifier: Expr,
+        identifier: Token,
         start: Expr,
         end: Expr,
         step: Expr,
@@ -50,7 +50,7 @@ impl Stmt {
         Self::Print(expr)
     }
 
-    pub fn var(target: Expr, expr: Expr) -> Self {
+    pub fn var(target: Token, expr: Expr) -> Self {
         Self::Var { target, expr }
     }
 
@@ -75,7 +75,7 @@ impl Stmt {
     }
 
     pub fn for_stmt(
-        identifier: Expr,
+        identifier: Token,
         start: Expr,
         end: Expr,
         step: Option<Expr>,
@@ -125,15 +125,12 @@ impl Stmt {
                 println!("{}", expr.eval(env));
             }
 
-            Stmt::Var { target, expr } => match target {
-                Expr::Variable(t) => {
-                    if let TokenType::Identifier(s) = &t.token_type {
-                        let val = expr.eval(env.clone());
-                        env.borrow_mut().clone().define_var(s, val);
-                    }
+            Stmt::Var { target, expr } => {
+                if let TokenType::Identifier(s) = &target.token_type {
+                    let val = expr.eval(env.clone());
+                    env.borrow_mut().clone().define_var(s, val);
                 }
-                _ => panic!("Invalid target for variable"),
-            },
+            }
 
             Stmt::Block(stmts) => {
                 let new_env = Rc::new(RefCell::new(Enviroment::default()));
@@ -180,9 +177,9 @@ impl Stmt {
                 let var_decl = Self::var(identifier.clone(), start.clone());
 
                 let st = Self::expr(Expr::assignment(
-                    identifier.clone(),
+                    Expr::variable(identifier.clone()),
                     Expr::binary(
-                        identifier.clone(),
+                        Expr::variable(identifier.clone()),
                         Token::new(TokenType::Plus, (0, 0)),
                         step.clone(),
                     ),
@@ -191,7 +188,11 @@ impl Stmt {
                 let mut stmts_cl = stmts.clone();
                 stmts_cl.push(st);
 
-                let condition = Expr::binary(identifier.clone(), condition.clone(), end.clone());
+                let condition = Expr::binary(
+                    Expr::variable(identifier.clone()),
+                    condition.clone(),
+                    end.clone(),
+                );
 
                 let while_stmt = Self::while_stmt(condition, stmts_cl);
 

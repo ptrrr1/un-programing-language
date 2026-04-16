@@ -1,12 +1,16 @@
-let n := 24; // Max range 
-let a := 0;
-let b := 1;
-let aux := 0;
+fun fib_iter(n)
+begin
+	let a := 0;
+	let b := 1;
+	let aux := 0;
 
-for i in [0..<n] do
-	aux = a;
-	a = b;
-	b = b + aux;
+	for i in [0..<n] do
+		aux = a;
+		a = b;
+		b = b + aux;
+	end
+
+	print(a);
 end
 
-print(a);
+fib_iter(24);

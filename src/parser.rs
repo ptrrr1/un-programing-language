@@ -74,21 +74,12 @@ impl Parser {
         let _fun = tokens.next().unwrap(); // I know next is FUN
         let mut params = Vec::new();
 
-        // TODO: Consume only Identifier
-        let identifier = match tokens.next_if(|t| matches!(t.token_type, TokenType::Identifier(_)))
-        {
-            Some(t) => t,
-            None => {
-                // TODO: FIX ERROR
-                return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
-            }
-        };
+        let identifier = Self::consume_identifier(tokens)?;
 
-        // TODO: FIX ERROR
         Self::consume(
             tokens,
             vec![TokenType::LeftParenthesis],
-            ParserError::UnexpectedEOF,
+            ParserError::ExpectedLeftParenthesisFunDecl(identifier.get_token_type()),
         )?;
 
         // TODO: Move to function
@@ -98,21 +89,7 @@ impl Parser {
         {
             // Makeshift do while Loop
             loop {
-                if params.len() >= 255 {
-                    // TODO: Actual Err + Position
-                    // TODO: Find a better way to do this
-                    // Book says not to synchronize, just report
-                    return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
-                    // eprintln!("Can't have more than 255 args");
-                }
-
-                match tokens.next_if(|t| matches!(t.token_type, TokenType::Identifier(_))) {
-                    Some(t) => params.push(t),
-                    None => {
-                        // TODO: FIX ERROR
-                        return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
-                    }
-                }
+                params.push(Self::consume_identifier(tokens)?);
 
                 if tokens
                     .next_if(|t| matches!(t.token_type, TokenType::Comma))
@@ -120,18 +97,29 @@ impl Parser {
                 {
                     break;
                 }
+
+                if params.len() >= 255 {
+                    let next_pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
+                    // NOTE: Book says not to synchronize, just report
+                    return Err(Error::new(
+                        next_pos,
+                        ParserError::ExcessiveArgumentsFunDecl(identifier.get_token_type()),
+                    ));
+                }
             }
         }
 
-        // TODO: Fix err
         Self::consume(
             tokens,
             vec![TokenType::RightParenthesis],
-            ParserError::UnclosedExpr,
+            ParserError::MissingRightParenthesisFunDecl(identifier.get_token_type()),
         )?;
 
-        // TODO: Fix err
-        Self::consume(tokens, vec![TokenType::Begin], ParserError::UnexpectedEOF)?;
+        Self::consume(
+            tokens,
+            vec![TokenType::Begin],
+            ParserError::ExpectedBeginBlock,
+        )?;
 
         let body = Stmt::block(Self::block(tokens)?);
 
@@ -143,8 +131,7 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         let _let = tokens.next().unwrap(); // I know next is LET
 
-        // TODO: Consume only Identifier
-        let identifier = Self::primary(tokens)?;
+        let identifier = Self::consume_identifier(tokens)?;
 
         Self::consume(
             tokens,
@@ -222,8 +209,7 @@ impl Parser {
 
         let condition = Self::equality(tokens)?;
 
-        // TODO: Add correct err
-        Self::consume(tokens, vec![TokenType::Then], ParserError::UnexpectedEOF)?;
+        Self::consume(tokens, vec![TokenType::Then], ParserError::MissingThenToken)?;
 
         let true_branch = Self::block_helper(tokens, vec![TokenType::End, TokenType::Else])?;
 
@@ -231,14 +217,13 @@ impl Parser {
             .next_if(|t| matches!(t.token_type, TokenType::Else))
             .is_none()
         {
-            Self::consume(tokens, vec![TokenType::End], ParserError::UnexpectedEOF)?;
+            Self::consume(tokens, vec![TokenType::End], ParserError::UnterminatedBlock)?;
 
             return Ok(Stmt::conditional(condition, true_branch, None));
         }
 
         // Don't need a Self::consume for 'else' because of "next_if", it
         // consumes if it finds it
-
         let false_branch = Self::block(tokens)?;
 
         Ok(Stmt::conditional(
@@ -258,7 +243,7 @@ impl Parser {
         Self::consume(
             tokens,
             vec![TokenType::Do],
-            ParserError::UnterminatedBlock, // TODO: Actual Err
+            ParserError::MissingDoBlockStart,
         )?;
 
         let stmts = Self::block(tokens)?;
@@ -271,21 +256,16 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         let _for = tokens.next().unwrap();
 
-        // TODO: Consume only identifier
-        let identifier = Self::primary(tokens)?;
+        let identifier = Self::consume_identifier(tokens)?;
 
-        Self::consume(
-            tokens,
-            vec![TokenType::In],
-            ParserError::UnterminatedBlock, // TODO: Actual Err
-        )?;
+        Self::consume(tokens, vec![TokenType::In], ParserError::MissingKeywordIn)?;
 
         let (start, condition, end, step) = Self::helper_range(tokens)?;
 
         Self::consume(
             tokens,
             vec![TokenType::Do],
-            ParserError::UnterminatedBlock, // TODO: Actual Err
+            ParserError::MissingDoBlockStart,
         )?;
 
         let stmts = Self::block(tokens)?;
@@ -362,7 +342,7 @@ impl Parser {
                 return Ok(Expr::assignment(expr, val));
             }
 
-            // This synchronizes but the book says not to
+            // NOTE: This synchronizes but the book says not to
             return Err(Error::new(
                 Pos::from(eq.line),
                 ParserError::InvalidAssignment,
@@ -501,13 +481,6 @@ impl Parser {
         {
             // Makeshift do while Loop
             loop {
-                if args.len() >= 255 {
-                    // TODO: Actual Err + Position
-                    // TODO: Find a better way to do this
-                    // Book says not to synchronize, just report
-                    return Err(Error::new(Pos::EOF, ParserError::UnexpectedEOF));
-                    // eprintln!("Can't have more than 255 args");
-                }
                 args.push(Self::or(tokens)?);
 
                 if tokens
@@ -516,14 +489,19 @@ impl Parser {
                 {
                     break;
                 }
+
+                if args.len() >= 255 {
+                    // NOTE: Book says not to synchronize, just report
+                    let next_pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
+                    return Err(Error::new(next_pos, ParserError::ExcessiveArguments));
+                }
             }
         }
 
-        // TODO: Fix err
         let paren = Self::consume(
             tokens,
             vec![TokenType::RightParenthesis],
-            ParserError::UnclosedExpr,
+            ParserError::UnclosedCallExpr,
         )?;
 
         Ok((paren, args))
@@ -595,17 +573,18 @@ impl Parser {
     ) -> Result<Expr, Error<ParserError>> {
         let condition = Self::or(tokens)?;
 
-        // TODO: Add correct err
-        Self::consume(tokens, vec![TokenType::Then], ParserError::UnexpectedEOF)?;
+        Self::consume(tokens, vec![TokenType::Then], ParserError::MissingThenToken)?;
         let true_branch = Self::or(tokens)?;
 
-        // TODO: Add correct err
-        Self::consume(tokens, vec![TokenType::Else], ParserError::UnexpectedEOF)?;
-
+        Self::consume(tokens, vec![TokenType::Else], ParserError::MissingElseToken)?;
         let false_branch = Self::or(tokens)?;
 
         // NOTE: Might remove for conditional expression...
-        Self::consume(tokens, vec![TokenType::End], ParserError::UnexpectedEOF)?;
+        Self::consume(
+            tokens,
+            vec![TokenType::End],
+            ParserError::UnterminatedIfElseExpr,
+        )?;
 
         Ok(Expr::conditional(condition, true_branch, false_branch))
     }
@@ -643,6 +622,18 @@ impl Parser {
         }
     }
 
+    fn consume_identifier<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Token, Error<ParserError>> {
+        match tokens.next_if(|t| matches!(t.token_type, TokenType::Identifier(_))) {
+            Some(t) => Ok(t),
+            None => {
+                let next_pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
+                Err(Error::new(next_pos, ParserError::ExpectedIdentifier))
+            }
+        }
+    }
+
     fn block_helper<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
         not_endpoint: Vec<TokenType>,
@@ -666,7 +657,7 @@ impl Parser {
         Self::consume(
             tokens,
             vec![TokenType::LeftBracket],
-            ParserError::UnterminatedBlock, // TODO: Actual Err
+            ParserError::ExpectedRangeStart,
         )?;
 
         let start = Self::or(tokens)?;
@@ -674,13 +665,13 @@ impl Parser {
         Self::consume(
             tokens,
             vec![TokenType::DotDot],
-            ParserError::UnterminatedBlock, // TODO: Actual Err
+            ParserError::MissingRangeOperator,
         )?;
 
         let condition = Self::consume(
             tokens,
             vec![TokenType::Lesser, TokenType::Greater],
-            ParserError::UnterminatedBlock, // TODO: Actual Err
+            ParserError::MissingRangeCondition,
         )?;
 
         let end = Self::or(tokens)?;
@@ -697,7 +688,7 @@ impl Parser {
         Self::consume(
             tokens,
             vec![TokenType::RightBracket],
-            ParserError::UnterminatedBlock, // TODO: Actual Err
+            ParserError::UnclosedRange,
         )?;
 
         Ok((start, condition, end, step))
