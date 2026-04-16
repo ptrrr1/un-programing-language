@@ -180,16 +180,19 @@ impl Scanner {
                             Some((_, c)) if *c == '.' || *c == '_' => {
                                 scanner_result.errors.push(Error::new(
                                     Pos::Known(pos_v, pos_h),
-                                    ScannerError::InvalidToken(c.to_string()),
+                                    ScannerError::UnexpectedNumberSeparator,
                                 ));
                             }
-                            Some((_, c)) if c.is_ascii_alphabetic() => {
+                            _ => {
                                 scanner_result.errors.push(Error::new(
                                     Pos::Known(pos_v, pos_h),
-                                    ScannerError::MissingSeparation,
+                                    ScannerError::UnexpectedNumberSeparator,
                                 ));
+
+                                scanner_result.add_token((pos_v, pos_h), &literal);
+                                literal.clear();
+                                state = States::Start;
                             }
-                            _ => {}
                         }
 
                         continue;

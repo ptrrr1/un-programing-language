@@ -6,6 +6,7 @@ pub enum ScannerError {
     MissingSeparation, // More generic with: MissingSeparation (space, comma, etc)
     MultipleDecimalDivider,
     UnclosedString,
+    UnexpectedNumberSeparator,
 }
 
 impl Display for ScannerError {
@@ -20,6 +21,9 @@ impl Display for ScannerError {
                 write!(f, "Multiple Decimal Divider, Use a single '.'")
             }
             ScannerError::UnclosedString => write!(f, "Unclosed String, Missing '\"'"),
+            ScannerError::UnexpectedNumberSeparator => {
+                write!(f, "Unexpected '_' in Number Literal")
+            }
         }
     }
 }
