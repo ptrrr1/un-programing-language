@@ -1,4 +1,4 @@
-use super::types::Value;
+use crate::types::value::Value;
 
 #[derive(Debug, Clone)]
 pub enum Signal {

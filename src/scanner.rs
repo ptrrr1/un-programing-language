@@ -318,6 +318,7 @@ impl Scanner {
             "and" => Some(TokenType::And),
             "or" => Some(TokenType::Or),
             "fun" => Some(TokenType::Fun),
+            "lambda" => Some(TokenType::Lambda),
             "return" => Some(TokenType::Return),
             "for" => Some(TokenType::For),
             "in" => Some(TokenType::In),

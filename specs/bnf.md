@@ -32,7 +32,7 @@ CONTINUE ::= "continue" ";"
 
 BREAK ::= "break" ";"
 
-RETURN ::= "return" OR? ";"
+RETURN ::= "return" LAMBDA? ";"
 
 FOR ::= "for" IDENTIFIER "in" "[" OR ".." ( "<" | ">" )  OR ( ";" OR )? "]" "do" DECLARATION* "end"
 
@@ -53,6 +53,9 @@ EXPR_STATEMENT ::= EXPRESSION";"
 EXPRESSION ::= ASSIGNMENT
 
 ASSIGNMENT ::= IDENTIFIER "=" ASSIGNMENT
+              | OR
+
+LAMBDA ::= "lambda" "(" PARAMETERS?  ")" OR
               | OR
 
 OR ::= AND ( "or" AND )*

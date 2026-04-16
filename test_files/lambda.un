@@ -1,0 +1,10 @@
+fun p(x)
+begin
+	print(x);
+end
+
+let double := lambda(x) p(x * 2);
+
+for n in [1..<10] do
+	double(n);
+end

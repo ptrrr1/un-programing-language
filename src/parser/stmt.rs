@@ -5,7 +5,8 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-use super::{callable::UnCallable, expr::Expr, signal::Signal, types::Value};
+use super::{expr::Expr, signal::Signal};
+use crate::types::{un_callable::UnCallable, value::Value};
 
 #[derive(Debug, Clone)]
 pub enum Stmt {

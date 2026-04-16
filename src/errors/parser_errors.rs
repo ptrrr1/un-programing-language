@@ -11,6 +11,9 @@ pub enum ParserError {
     UnterminatedStmt,
     InvalidAssignment,
 
+    // Lambda
+    // ExpectedLambdaBody,
+
     // Function Decl
     ExpectedLeftParenthesisFunDecl(TokenType),
     MissingRightParenthesisFunDecl(TokenType),
@@ -50,8 +53,10 @@ impl Display for ParserError {
             ParserError::UnexpectedEOF => write!(f, "Unexpected End of File"),
             ParserError::UnclosedExpr => write!(f, "Unclosed Expression"),
             ParserError::InvalidPrint => write!(f, "Invalid syntax for Print Statement"),
-            ParserError::UnterminatedStmt => write!(f, "Unterminated Statementet, Missing ';'"),
+            ParserError::UnterminatedStmt => write!(f, "Unterminated Statement, Missing ';'"),
             ParserError::InvalidAssignment => write!(f, "Invalid Assignment Target"),
+            // Lambda
+            // ParserError::ExpectedLambdaBody => write!(f, "Expected Lambda Body"),
             // Function Decl
             ParserError::ExpectedLeftParenthesisFunDecl(token_type) => {
                 write!(

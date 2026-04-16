@@ -1,25 +1,12 @@
-use std::{
-    cell::RefCell,
-    fmt::{Debug, Display},
-    rc::Rc,
-};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use crate::{
     enviroment::Enviroment,
+    parser::{signal::Signal, stmt::Stmt},
     tokens::{Token, TokenType},
 };
 
-use super::{signal::Signal, stmt::Stmt, types::Value};
-
-pub trait Callable: Debug + Display {
-    fn call(&self, args: Vec<Value>) -> Value;
-    fn arity(&self) -> usize;
-    fn is_variable_arity(&self) -> bool;
-}
-
-pub trait ExposedCallable: Callable {
-    fn definition() -> (String, Value);
-}
+use super::{callable::Callable, value::Value};
 
 #[derive(Debug)]
 pub struct UnCallable {

@@ -8,11 +8,9 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-pub mod callable;
 pub mod expr;
 pub mod signal;
 pub mod stmt;
-pub mod types;
 
 #[derive(Debug, Default)]
 pub struct ParserResult {
@@ -73,48 +71,9 @@ impl Parser {
         tokens: &mut Peekable<I>,
     ) -> Result<Stmt, Error<ParserError>> {
         let _fun = tokens.next().unwrap(); // I know next is FUN
-        let mut params = Vec::new();
 
         let identifier = Self::consume_identifier(tokens)?;
-
-        Self::consume(
-            tokens,
-            vec![TokenType::LeftParenthesis],
-            ParserError::ExpectedLeftParenthesisFunDecl(identifier.get_token_type()),
-        )?;
-
-        // TODO: Move to function
-        if tokens
-            .peek()
-            .is_some_and(|t| !matches!(t.token_type, TokenType::RightParenthesis))
-        {
-            // Makeshift do while Loop
-            loop {
-                params.push(Self::consume_identifier(tokens)?);
-
-                if tokens
-                    .next_if(|t| matches!(t.token_type, TokenType::Comma))
-                    .is_none()
-                {
-                    break;
-                }
-
-                if params.len() >= 255 {
-                    let next_pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
-                    // NOTE: Book says not to synchronize, just report
-                    return Err(Error::new(
-                        next_pos,
-                        ParserError::ExcessiveArgumentsFunDecl(identifier.get_token_type()),
-                    ));
-                }
-            }
-        }
-
-        Self::consume(
-            tokens,
-            vec![TokenType::RightParenthesis],
-            ParserError::MissingRightParenthesisFunDecl(identifier.get_token_type()),
-        )?;
+        let params = Self::consume_params(tokens, identifier.get_token_type())?;
 
         Self::consume(
             tokens,
@@ -214,7 +173,7 @@ impl Parser {
 
         Self::consume(tokens, vec![TokenType::Then], ParserError::MissingThenToken)?;
 
-        let true_branch = Self::block_helper(tokens, vec![TokenType::End, TokenType::Else])?;
+        let true_branch = Self::consume_block(tokens, vec![TokenType::End, TokenType::Else])?;
 
         if tokens
             .next_if(|t| matches!(t.token_type, TokenType::Else))
@@ -263,7 +222,7 @@ impl Parser {
 
         Self::consume(tokens, vec![TokenType::In], ParserError::MissingKeywordIn)?;
 
-        let (start, condition, end, step) = Self::helper_range(tokens)?;
+        let (start, condition, end, step) = Self::consume_range(tokens)?;
 
         Self::consume(
             tokens,
@@ -290,7 +249,13 @@ impl Parser {
             return Ok(Stmt::return_stmt(None));
         }
 
-        let expr = Self::or(tokens)?;
+        let mut expr = None;
+        if tokens
+            .peek()
+            .is_some_and(|t| !matches!(t.token_type, TokenType::Semicolon))
+        {
+            expr = Some(Self::or(tokens)?);
+        }
 
         Self::consume(
             tokens,
@@ -298,7 +263,7 @@ impl Parser {
             ParserError::UnterminatedStmt,
         )?;
 
-        Ok(Stmt::return_stmt(Some(expr)))
+        Ok(Stmt::return_stmt(expr))
     }
 
     fn break_stmt<I: Iterator<Item = Token>>(
@@ -332,7 +297,7 @@ impl Parser {
     fn block<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Vec<Stmt>, Error<ParserError>> {
-        let stmts = Self::block_helper(tokens, vec![TokenType::End])?;
+        let stmts = Self::consume_block(tokens, vec![TokenType::End])?;
 
         Self::consume(tokens, vec![TokenType::End], ParserError::UnterminatedBlock)?;
 
@@ -360,7 +325,7 @@ impl Parser {
     fn assignment<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
-        let expr = Self::or(tokens)?;
+        let expr = Self::lambda(tokens)?;
 
         if let Some(eq) = tokens.next_if(|t| matches!(t.token_type, TokenType::Equal)) {
             // NOTE: This allows something like:
@@ -381,6 +346,22 @@ impl Parser {
         }
 
         Ok(expr)
+    }
+
+    fn lambda<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<Expr, Error<ParserError>> {
+        if tokens
+            .next_if(|t| matches!(t.token_type, TokenType::Lambda))
+            .is_some()
+        {
+            let params = Self::consume_params(tokens, TokenType::Lambda)?;
+            let body = Self::or(tokens)?;
+
+            Ok(Expr::lambda(params, body))
+        } else {
+            Self::or(tokens)
+        }
     }
 
     fn or<I: Iterator<Item = Token>>(tokens: &mut Peekable<I>) -> Result<Expr, Error<ParserError>> {
@@ -495,47 +476,11 @@ impl Parser {
             .next_if(|t| matches!(t.token_type, TokenType::LeftParenthesis))
             .is_some()
         {
-            let (paren, args) = Self::finish_call(tokens)?;
+            let (paren, args) = Self::consume_args(tokens)?;
             callee = Expr::callable(callee, paren, args);
         }
 
         Ok(callee)
-    }
-
-    fn finish_call<I: Iterator<Item = Token>>(
-        tokens: &mut Peekable<I>,
-    ) -> Result<(Token, Vec<Expr>), Error<ParserError>> {
-        let mut args: Vec<Expr> = vec![];
-        if tokens
-            .peek()
-            .is_some_and(|t| !matches!(t.token_type, TokenType::RightParenthesis))
-        {
-            // Makeshift do while Loop
-            loop {
-                args.push(Self::or(tokens)?);
-
-                if tokens
-                    .next_if(|t| matches!(t.token_type, TokenType::Comma))
-                    .is_none()
-                {
-                    break;
-                }
-
-                if args.len() >= 255 {
-                    // NOTE: Book says not to synchronize, just report
-                    let next_pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
-                    return Err(Error::new(next_pos, ParserError::ExcessiveArguments));
-                }
-            }
-        }
-
-        let paren = Self::consume(
-            tokens,
-            vec![TokenType::RightParenthesis],
-            ParserError::UnclosedCallExpr,
-        )?;
-
-        Ok((paren, args))
     }
 
     fn primary<I: Iterator<Item = Token>>(
@@ -665,7 +610,90 @@ impl Parser {
         }
     }
 
-    fn block_helper<I: Iterator<Item = Token>>(
+    fn consume_params<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+        fun_token: TokenType,
+    ) -> Result<Vec<Token>, Error<ParserError>> {
+        let mut params = Vec::new();
+
+        Self::consume(
+            tokens,
+            vec![TokenType::LeftParenthesis],
+            ParserError::ExpectedLeftParenthesisFunDecl(fun_token.clone()),
+        )?;
+
+        if tokens
+            .peek()
+            .is_some_and(|t| !matches!(t.token_type, TokenType::RightParenthesis))
+        {
+            // Makeshift do while Loop
+            loop {
+                params.push(Self::consume_identifier(tokens)?);
+
+                if tokens
+                    .next_if(|t| matches!(t.token_type, TokenType::Comma))
+                    .is_none()
+                {
+                    break;
+                }
+
+                if params.len() >= 255 {
+                    let next_pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
+                    // NOTE: Book says not to synchronize, just report
+                    return Err(Error::new(
+                        next_pos,
+                        ParserError::ExcessiveArgumentsFunDecl(fun_token.clone()),
+                    ));
+                }
+            }
+        }
+
+        Self::consume(
+            tokens,
+            vec![TokenType::RightParenthesis],
+            ParserError::MissingRightParenthesisFunDecl(fun_token),
+        )?;
+
+        Ok(params)
+    }
+
+    fn consume_args<I: Iterator<Item = Token>>(
+        tokens: &mut Peekable<I>,
+    ) -> Result<(Token, Vec<Expr>), Error<ParserError>> {
+        let mut args: Vec<Expr> = vec![];
+        if tokens
+            .peek()
+            .is_some_and(|t| !matches!(t.token_type, TokenType::RightParenthesis))
+        {
+            // Makeshift do while Loop
+            loop {
+                args.push(Self::or(tokens)?);
+
+                if tokens
+                    .next_if(|t| matches!(t.token_type, TokenType::Comma))
+                    .is_none()
+                {
+                    break;
+                }
+
+                if args.len() >= 255 {
+                    // NOTE: Book says not to synchronize, just report
+                    let next_pos = tokens.peek().map_or(Pos::EOF, |t| Pos::from(t.line));
+                    return Err(Error::new(next_pos, ParserError::ExcessiveArguments));
+                }
+            }
+        }
+
+        let paren = Self::consume(
+            tokens,
+            vec![TokenType::RightParenthesis],
+            ParserError::UnclosedCallExpr,
+        )?;
+
+        Ok((paren, args))
+    }
+
+    fn consume_block<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
         not_endpoint: Vec<TokenType>,
     ) -> Result<Vec<Stmt>, Error<ParserError>> {
@@ -682,7 +710,7 @@ impl Parser {
         Ok(stmts)
     }
 
-    fn helper_range<I: Iterator<Item = Token>>(
+    fn consume_range<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<(Expr, Token, Expr, Option<Expr>), Error<ParserError>> {
         Self::consume(

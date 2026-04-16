@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::parser::types::Value;
+use crate::types::value::Value;
 
 #[derive(Debug, Default, Clone)]
 pub struct Enviroment {

@@ -5,7 +5,7 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-use super::types::Value;
+use crate::types::{lambda_callable::LambdaCallable, value::Value};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -35,6 +35,10 @@ pub enum Expr {
         callee: Rc<Expr>,
         paren: Token,
         args: Vec<Expr>,
+    },
+    Lambda {
+        params: Vec<Token>,
+        body: Rc<Expr>,
     },
 }
 
@@ -90,6 +94,13 @@ impl Expr {
             callee: Rc::new(callee),
             paren,
             args,
+        }
+    }
+
+    pub fn lambda(params: Vec<Token>, body: Expr) -> Expr {
+        Expr::Lambda {
+            params,
+            body: Rc::new(body),
         }
     }
 
@@ -305,6 +316,12 @@ impl Expr {
                     }
                     _ => panic!("Can only call functions"),
                 }
+            }
+
+            Expr::Lambda { params, body } => {
+                let lambda = LambdaCallable::new(params.clone(), body.clone(), env.clone());
+
+                Value::Callee(Rc::new(lambda))
             }
         }
     }
