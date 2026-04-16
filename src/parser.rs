@@ -122,7 +122,7 @@ impl Parser {
             ParserError::ExpectedBeginBlock,
         )?;
 
-        let body = Stmt::block(Self::block(tokens)?);
+        let body = Self::block(tokens)?;
 
         Ok(Stmt::function(identifier, params, body))
     }

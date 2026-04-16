@@ -36,7 +36,7 @@ pub enum Stmt {
     Function {
         identifier: Token,
         params: Vec<Token>,
-        body: Rc<Stmt>,
+        body: Vec<Stmt>,
     },
     Return(Expr),
     Break,
@@ -100,11 +100,11 @@ impl Stmt {
         }
     }
 
-    pub fn function(identifier: Token, params: Vec<Token>, body: Stmt) -> Self {
+    pub fn function(identifier: Token, params: Vec<Token>, body: Vec<Stmt>) -> Self {
         Self::Function {
             identifier,
             params,
-            body: Rc::new(body),
+            body,
         }
     }
 
@@ -198,7 +198,7 @@ impl Stmt {
                         match r {
                             Signal::Return(_) => return r,
                             Signal::Break => break 'outer,
-                            Signal::Continue => continue,
+                            Signal::Continue => continue 'outer,
                             Signal::Normal => (),
                         }
                     }

@@ -1,0 +1,8 @@
+fun scope(a)
+begin
+	let a := "local";
+
+	print(a);
+end
+
+scope(2);

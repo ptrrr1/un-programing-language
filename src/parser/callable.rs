@@ -25,11 +25,11 @@ pub trait ExposedCallable: Callable {
 pub struct UnCallable {
     identifier: String,
     params: Vec<Token>,
-    body: Rc<Stmt>,
+    body: Vec<Stmt>,
 }
 
 impl UnCallable {
-    pub fn new(identifier: String, params: Vec<Token>, body: Rc<Stmt>) -> Self {
+    pub fn new(identifier: String, params: Vec<Token>, body: Vec<Stmt>) -> Self {
         Self {
             identifier,
             params,
@@ -49,11 +49,16 @@ impl Callable for UnCallable {
             }
         }
 
-        match self.body.eval(Rc::new(RefCell::new(new_env))) {
-            Signal::Normal => Value::Nil,
-            Signal::Return(value) => value,
-            Signal::Break | Signal::Continue => panic!("Handle Err"), // TODO: Handler Err
+        let rc_new_env = Rc::new(RefCell::new(new_env));
+        for stmt in &self.body {
+            match stmt.eval(rc_new_env.clone()) {
+                Signal::Normal => (),
+                Signal::Return(value) => return value,
+                Signal::Break | Signal::Continue => panic!("Handle Err"), // TODO: Handler Err
+            };
         }
+
+        Value::Nil
     }
 
     fn arity(&self) -> usize {
