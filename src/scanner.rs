@@ -333,6 +333,8 @@ impl Scanner {
             "true" => Some(TokenType::True),
             "false" => Some(TokenType::False),
             "let" => Some(TokenType::Let),
+            "break" => Some(TokenType::Break),
+            "continue" => Some(TokenType::Continue),
             _ if literal.chars().all(|c| c.is_ascii_whitespace()) => Some(TokenType::Space),
             _ if literal.starts_with("@")
                 && literal

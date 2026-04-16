@@ -9,7 +9,7 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-use super::{stmt::Stmt, types::Value};
+use super::{signal::Signal, stmt::Stmt, types::Value};
 
 pub trait Callable: Debug + Display {
     fn call(&self, args: Vec<Value>, env: Rc<RefCell<Enviroment>>) -> Value;
@@ -43,16 +43,17 @@ impl Callable for UnCallable {
         let mut new_env = Enviroment::default();
         new_env.set_outer(env.clone());
 
-        args.iter()
-            .enumerate()
-            .for_each(|(i, v)| match &self.params[i].token_type {
-                TokenType::Identifier(s) => new_env.define_var(s, v.clone()),
-                _ => panic!("Invalid assignment target in function"),
-            });
+        for (param, arg) in self.params.iter().zip(args) {
+            if let TokenType::Identifier(s) = &param.token_type {
+                new_env.define_var(s, arg)
+            }
+        }
 
-        self.body.eval(Rc::new(RefCell::new(new_env)));
-
-        Value::Nil
+        match self.body.eval(Rc::new(RefCell::new(new_env))) {
+            Signal::Normal => Value::Nil,
+            Signal::Return(value) => value,
+            Signal::Break | Signal::Continue => panic!("Handle Err"), // TODO: Handler Err
+        }
     }
 
     fn arity(&self) -> usize {

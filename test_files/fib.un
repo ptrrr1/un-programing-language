@@ -10,7 +10,7 @@ begin
 		b = b + aux;
 	end
 
-	print(a);
+	return a;
 end
 
-fib_iter(24);
+print(fib_iter(24));

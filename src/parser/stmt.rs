@@ -5,7 +5,7 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-use super::{callable::UnCallable, expr::Expr, types::Value};
+use super::{callable::UnCallable, expr::Expr, signal::Signal, types::Value};
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
@@ -39,6 +39,8 @@ pub enum Stmt {
         body: Rc<Stmt>,
     },
     Return(Expr),
+    Break,
+    Continue,
 }
 
 impl Stmt {
@@ -114,31 +116,51 @@ impl Stmt {
         }
     }
 
-    // TODO: When encountering an Erro, crash!!!!!
-    pub fn eval(&self, env: Rc<RefCell<Enviroment>>) {
+    pub fn break_stmt() -> Self {
+        Self::Break
+    }
+
+    pub fn continue_stmt() -> Self {
+        Self::Continue
+    }
+
+    // TODO: Remove panics and reprocess Errors at top level of interpreter
+    pub fn eval(&self, env: Rc<RefCell<Enviroment>>) -> Signal {
         match self {
             Stmt::Expr(expr) => {
                 expr.eval(env);
+
+                Signal::Normal
             }
 
             Stmt::Print(expr) => {
                 println!("{}", expr.eval(env));
+
+                Signal::Normal
             }
 
             Stmt::Var { target, expr } => {
                 if let TokenType::Identifier(s) = &target.token_type {
                     let val = expr.eval(env.clone());
-                    env.borrow_mut().clone().define_var(s, val);
+                    env.borrow_mut().define_var(s, val);
                 }
+
+                Signal::Normal
             }
 
             Stmt::Block(stmts) => {
                 let new_env = Rc::new(RefCell::new(Enviroment::default()));
-                new_env.borrow_mut().set_outer(env);
+                new_env.borrow_mut().set_outer(env.clone());
 
                 for stmt in stmts {
-                    stmt.eval(new_env.clone());
+                    let r = stmt.eval(new_env.clone());
+
+                    if !matches!(r, Signal::Normal) {
+                        return r;
+                    }
                 }
+
+                Signal::Normal
             }
 
             Stmt::Conditional {
@@ -149,21 +171,40 @@ impl Stmt {
                 let c = condition.eval(env.clone());
                 if c.get_truthyness() {
                     for stmt in true_branch {
-                        stmt.eval(env.clone());
+                        let r = stmt.eval(env.clone());
+
+                        if !matches!(r, Signal::Normal) {
+                            return r;
+                        }
                     }
                 } else if let Some(f) = false_branch {
                     for stmt in f {
-                        stmt.eval(env.clone());
+                        let r = stmt.eval(env.clone());
+
+                        if !matches!(r, Signal::Normal) {
+                            return r;
+                        }
                     }
                 }
+
+                Signal::Normal
             }
 
             Stmt::While { condition, stmts } => {
-                while condition.eval(env.clone()).get_truthyness() {
+                'outer: while condition.eval(env.clone()).get_truthyness() {
                     for stmt in stmts {
-                        stmt.eval(env.clone());
+                        let r = stmt.eval(env.clone());
+
+                        match r {
+                            Signal::Return(_) => return r,
+                            Signal::Break => break 'outer,
+                            Signal::Continue => continue,
+                            Signal::Normal => (),
+                        }
                     }
                 }
+
+                Signal::Normal
             }
 
             Stmt::For {
@@ -180,7 +221,7 @@ impl Stmt {
                     Expr::variable(identifier.clone()),
                     Expr::binary(
                         Expr::variable(identifier.clone()),
-                        Token::new(TokenType::Plus, (0, 0)),
+                        Token::new(TokenType::Plus, (0, 0)), // TODO: Handle this pos
                         step.clone(),
                     ),
                 ));
@@ -203,17 +244,27 @@ impl Stmt {
                 identifier,
                 params,
                 body,
-            } => match &identifier.token_type {
-                TokenType::Identifier(s) => {
-                    let un_callable = UnCallable::new(s.clone(), params.clone(), body.clone());
-                    let val = Value::Callee(Rc::new(un_callable));
+            } => {
+                match &identifier.token_type {
+                    TokenType::Identifier(s) => {
+                        let un_callable = UnCallable::new(s.clone(), params.clone(), body.clone());
+                        let val = Value::Callee(Rc::new(un_callable));
 
-                    env.borrow_mut().define_var(s, val);
+                        env.borrow_mut().define_var(s, val);
+                    }
+                    _ => panic!("Not an identifier for a function"),
                 }
-                _ => panic!("Not an identifier for a function"),
-            },
 
-            Stmt::Return(expr) => todo!(), // return Err with RetunValue of Return
+                Signal::Normal
+            }
+
+            Stmt::Return(expr) => {
+                let v = expr.eval(env.clone());
+
+                Signal::Return(v)
+            }
+            Stmt::Break => Signal::Break,
+            Stmt::Continue => Signal::Continue,
         }
     }
 }

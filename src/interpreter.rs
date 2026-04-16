@@ -7,7 +7,12 @@ use std::{
     rc::Rc,
 };
 
-use crate::{enviroment::Enviroment, parser::Parser, scanner::Scanner, tokens::TokenType};
+use crate::{
+    enviroment::Enviroment,
+    parser::{Parser, signal::Signal},
+    scanner::Scanner,
+    tokens::TokenType,
+};
 
 #[derive(Debug, Default)]
 pub struct Interpreter {
@@ -61,7 +66,19 @@ impl Interpreter {
         // dbg!(&parser_result);
 
         for stmt in parser_result.into_stmt() {
-            stmt.eval(self.env.clone());
+            // dbg!(&stmt);
+            let s = stmt.eval(self.env.clone());
+            // dbg!(&s);
+
+            match s {
+                Signal::Normal => continue,
+                Signal::Return(_val) => {
+                    // TODO: Improve
+                    eprintln!("Return outside of function")
+                }
+                Signal::Break => eprintln!("Break outside of loop"),
+                Signal::Continue => eprintln!("Continue outside of loop"),
+            }
         }
 
         Ok(())

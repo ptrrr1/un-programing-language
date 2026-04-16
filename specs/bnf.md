@@ -25,6 +25,12 @@ STATEMENT ::= EXPR_STATEMENT
               | WHILE
               | FOR
               | RETURN
+              | BREAK
+              | CONTINUE
+
+CONTINUE ::= "continue" ";"
+
+BREAK ::= "break" ";"
 
 RETURN ::= "return" OR? ";"
 
