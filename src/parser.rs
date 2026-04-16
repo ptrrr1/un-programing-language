@@ -210,7 +210,7 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         let _if = tokens.next().unwrap();
 
-        let condition = Self::equality(tokens)?;
+        let condition = Self::or(tokens)?;
 
         Self::consume(tokens, vec![TokenType::Then], ParserError::MissingThenToken)?;
 

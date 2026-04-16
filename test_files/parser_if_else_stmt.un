@@ -16,3 +16,7 @@ begin
 		
 	end
 end
+
+if "abc" == "abc" or 3 == 4 then
+	print("aaaa");
+end

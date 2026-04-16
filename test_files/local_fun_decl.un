@@ -1,0 +1,16 @@
+fun make_counter()
+begin
+	let i := 0;
+
+	fun count()
+	begin
+		i = i + 1;
+		print(i);
+	end
+
+	return count;
+end
+
+let counter := make_counter();
+
+counter();

@@ -82,7 +82,7 @@ end
 // TODO: Evaluate if loop will run infinitely and throw err
 // Should be easy taking into account s and k - i
 
-for n in [i..k;s] do
+for n in [i..<k;s] do
 	... // Some more, but counted
 end
 
@@ -92,6 +92,7 @@ end
 
 // User-defined
 fun name_here(v1, v2, ..., vn) // -> Return Type ... Is what I would say if it had it
+begin
 	... // Code
 end
 

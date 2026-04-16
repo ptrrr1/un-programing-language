@@ -93,6 +93,7 @@ impl Expr {
         }
     }
 
+    // TODO: Remove panics, add RuntimeError
     pub fn eval(&self, env: Rc<RefCell<Enviroment>>) -> Value {
         match self {
             Expr::Assignment { target, expr } => {
