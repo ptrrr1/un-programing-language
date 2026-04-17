@@ -1,5 +1,4 @@
-//fun fib_iter(n)
-//begin
+//fn fib_iter(n)
 //	let a := 0;
 //	let b := 1;
 //	let aux := 0;
@@ -13,8 +12,7 @@
 //	return a;
 //end
 
-fun fib_rec(n)
-begin
+fn fib_rec(n)
 	if n < 2 then
 		return n;
 	else
@@ -24,4 +22,4 @@ end
 
 // print(fib_iter(24));
 
-print(fib_rec(24));
+print(fib_rec(30));

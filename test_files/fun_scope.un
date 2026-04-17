@@ -1,5 +1,4 @@
-fun scope(a)
-begin
+fn scope(a)
 	let a := "local";
 
 	print(a);

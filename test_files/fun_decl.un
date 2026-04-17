@@ -1,13 +1,11 @@
 let x := 2;
 
-fun foo()
-begin
+fn foo()
 	x = x + 2;
 	print("mutate");
 end
 
-fun bar(x)
-begin
+fn bar(x)
 	print(x);
 end
 

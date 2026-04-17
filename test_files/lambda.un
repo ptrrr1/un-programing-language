@@ -1,10 +1,19 @@
-fun p(x)
-begin
+fn p(x)
 	print(x);
 end
 
-let double := lambda(x) p(x * 2);
+let double := fn(x) p(x * 2);
 
 for n in [1..<10] do
 	double(n);
+end
+
+let fnfn := fn(x) fn(y) x + y;
+
+for i in [1..<5] do
+	let sum_i := fnfn(i);
+	
+	for j in [1..<5] do
+		print(sum_i(j));
+	end
 end

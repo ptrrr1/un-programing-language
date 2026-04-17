@@ -15,8 +15,8 @@ pub enum ParserError {
     // ExpectedLambdaBody,
 
     // Function Decl
-    ExpectedLeftParenthesisFunDecl(TokenType),
-    MissingRightParenthesisFunDecl(TokenType),
+    ExpectedLeftParenthesisFnDecl(TokenType),
+    MissingRightParenthesisFnDecl(TokenType),
     ExcessiveArgumentsFunDecl(TokenType),
     ExpectedIdentifier,
 
@@ -58,21 +58,40 @@ impl Display for ParserError {
             // Lambda
             // ParserError::ExpectedLambdaBody => write!(f, "Expected Lambda Body"),
             // Function Decl
-            ParserError::ExpectedLeftParenthesisFunDecl(token_type) => {
-                write!(
-                    f,
-                    "Expected '(' In Function Declaration <fn {}>",
-                    token_type
-                )
+            ParserError::ExpectedLeftParenthesisFnDecl(token_type) => {
+                match token_type {
+                    TokenType::Identifier(s) => {
+                        write!(f, "Expected '(' In Function Declaration <fn {}>", s)
+                    }
+                    // I'm only expecting TokenType::Fn, so anything else would be an err, but I don't really want to panic
+                    _ => write!(f, "Expected '(' In Function Declaration <lambda>"),
+                }
             }
-            ParserError::MissingRightParenthesisFunDecl(token_type) => {
-                write!(f, "Missing ')' in Function Declaration <fn {}>", token_type)
+            ParserError::MissingRightParenthesisFnDecl(token_type) => {
+                match token_type {
+                    TokenType::Identifier(s) => {
+                        write!(f, "Missing ')' in Function Declaration <fn {}>", s)
+                    }
+                    // I'm only expecting TokenType::Fn, so anything else would be an err, but I don't really want to panic
+                    _ => write!(f, "Missing ')' In Function Declaration <lambda>"),
+                }
             }
-            ParserError::ExcessiveArgumentsFunDecl(token_type) => write!(
-                f,
-                "Excessive arguments in Function Declaration <fn {}>, Limit is 255",
-                token_type
-            ),
+            ParserError::ExcessiveArgumentsFunDecl(token_type) => {
+                match token_type {
+                    TokenType::Identifier(s) => {
+                        write!(
+                            f,
+                            "Excessive arguments in Function Declaration <fn {}>, Limit is 255",
+                            s
+                        )
+                    }
+                    // I'm only expecting TokenType::Fn, so anything else would be an err, but I don't really want to panic
+                    _ => write!(
+                        f,
+                        "Excessive arguments in Function Declaration <lambda>, Limit is 255",
+                    ),
+                }
+            }
             ParserError::ExpectedIdentifier => {
                 write!(f, "Expected Identifier in Function Declaration")
             }

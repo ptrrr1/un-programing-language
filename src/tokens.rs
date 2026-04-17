@@ -70,8 +70,7 @@ pub enum TokenType {
     And,
     Or,
 
-    Fun,
-    Lambda,
+    Fn,
     Return,
 
     For,
@@ -129,8 +128,7 @@ impl Display for TokenType {
             TokenType::Not => write!(f, "not"),
             TokenType::And => write!(f, "and"),
             TokenType::Or => write!(f, "or"),
-            TokenType::Fun => write!(f, "fun"),
-            TokenType::Lambda => write!(f, "lambda"),
+            TokenType::Fn => write!(f, "fn"),
             TokenType::Return => write!(f, "return"),
             TokenType::For => write!(f, "for"),
             TokenType::In => write!(f, "in"),

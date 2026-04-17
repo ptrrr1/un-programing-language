@@ -1,9 +1,7 @@
-fun make_counter()
-begin
+fn make_counter()
 	let i := 0;
 
-	fun count()
-	begin
+	fn count()
 		i = i + 1;
 		print(i);
 	end

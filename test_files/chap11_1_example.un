@@ -1,0 +1,11 @@
+let a := 1;
+begin
+	fn foo()
+	begin
+		print(a);
+	end
+
+	foo();
+	let a := 2;
+	foo();
+end

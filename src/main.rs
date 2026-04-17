@@ -13,7 +13,6 @@ pub mod parser;
 pub mod scanner;
 pub mod tokens;
 pub mod types;
-pub mod un_std;
 
 fn main() -> io::Result<()> {
     let interpreter = Interpreter::default();

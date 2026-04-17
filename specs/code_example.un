@@ -88,23 +88,24 @@ end
 
 // FUNCTIONS!
 // This is meant as a scripting language (and learning as well)
-// As such, there are two types of functions: User-defined and Exposed
+// As such, there are two (three?) types of functions: User-defined and Exposed
 
 // User-defined
-fun name_here(v1, v2, ..., vn) // -> Return Type ... Is what I would say if it had it
-begin
+fn name_here(v1, v2, ..., vn) // -> Return Type ... Is what I would say if it had it
 	... // Code
 end
 
 // using...
 name_here(a, b, ..., z); // NOTE: They might be first-class...
 
+// Lambdas
+// They only accept a single expression similar to python's lambda
+fn(x) x + 2;
+
 // Exposed
 // Exposed functions can only receive and/or return values
 
 @name_here(a, b, ..., z); // Note the prefix '@'
-
-// NOTE: Maybe closures? I need to finish the book first...
 
 // Future Ideas? (At least beyond the book)
 

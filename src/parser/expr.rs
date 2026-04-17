@@ -292,11 +292,7 @@ impl Expr {
                 }
             }
 
-            Expr::Call {
-                callee,
-                paren,
-                args,
-            } => {
+            Expr::Call { callee, args, .. } => {
                 let eval_callee = callee.eval(env.clone());
 
                 let mut eval_args: Vec<Value> = vec![];

@@ -58,7 +58,7 @@ impl Parser {
     ) -> Result<Stmt, Error<ParserError>> {
         if let Some(t) = tokens.peek() {
             match t.token_type {
-                TokenType::Fun => Self::fun_declaration(tokens),
+                TokenType::Fn => Self::fn_declaration(tokens),
                 TokenType::Let => Self::var_declaration(tokens),
                 _ => Self::statement(tokens),
             }
@@ -67,7 +67,7 @@ impl Parser {
         }
     }
 
-    fn fun_declaration<I: Iterator<Item = Token>>(
+    fn fn_declaration<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
     ) -> Result<Stmt, Error<ParserError>> {
         let _fun = tokens.next().unwrap(); // I know next is FUN
@@ -75,11 +75,11 @@ impl Parser {
         let identifier = Self::consume_identifier(tokens)?;
         let params = Self::consume_params(tokens, identifier.get_token_type())?;
 
-        Self::consume(
-            tokens,
-            vec![TokenType::Begin],
-            ParserError::ExpectedBeginBlock,
-        )?;
+        // Self::consume(
+        //     tokens,
+        //     vec![TokenType::Begin],
+        //     ParserError::ExpectedBeginBlock,
+        // )?;
 
         let body = Self::block(tokens)?;
 
@@ -352,11 +352,11 @@ impl Parser {
         tokens: &mut Peekable<I>,
     ) -> Result<Expr, Error<ParserError>> {
         if tokens
-            .next_if(|t| matches!(t.token_type, TokenType::Lambda))
+            .next_if(|t| matches!(t.token_type, TokenType::Fn))
             .is_some()
         {
-            let params = Self::consume_params(tokens, TokenType::Lambda)?;
-            let body = Self::or(tokens)?;
+            let params = Self::consume_params(tokens, TokenType::Fn)?;
+            let body = Self::lambda(tokens)?;
 
             Ok(Expr::lambda(params, body))
         } else {
@@ -572,7 +572,7 @@ impl Parser {
                     tokens.next();
                     break;
                 }
-                TokenType::Fun
+                TokenType::Fn
                 | TokenType::Return
                 | TokenType::Let
                 | TokenType::For
@@ -612,14 +612,14 @@ impl Parser {
 
     fn consume_params<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,
-        fun_token: TokenType,
+        fn_token: TokenType,
     ) -> Result<Vec<Token>, Error<ParserError>> {
         let mut params = Vec::new();
 
         Self::consume(
             tokens,
             vec![TokenType::LeftParenthesis],
-            ParserError::ExpectedLeftParenthesisFunDecl(fun_token.clone()),
+            ParserError::ExpectedLeftParenthesisFnDecl(fn_token.clone()),
         )?;
 
         if tokens
@@ -642,7 +642,7 @@ impl Parser {
                     // NOTE: Book says not to synchronize, just report
                     return Err(Error::new(
                         next_pos,
-                        ParserError::ExcessiveArgumentsFunDecl(fun_token.clone()),
+                        ParserError::ExcessiveArgumentsFunDecl(fn_token.clone()),
                     ));
                 }
             }
@@ -651,7 +651,7 @@ impl Parser {
         Self::consume(
             tokens,
             vec![TokenType::RightParenthesis],
-            ParserError::MissingRightParenthesisFunDecl(fun_token),
+            ParserError::MissingRightParenthesisFnDecl(fn_token),
         )?;
 
         Ok(params)

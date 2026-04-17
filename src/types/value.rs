@@ -8,6 +8,7 @@ pub enum Types {
     Bool,
     Number,
     String,
+    Callable,
     Nil,
 }
 
