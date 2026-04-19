@@ -1,0 +1,27 @@
+use-grammars = { only = ["un"] }
+
+[[language]]
+name = "un"
+scope = "source.un"
+injection-regex = "un"
+file-types = ["un"]
+# auto-format = true
+comment-tokens = "//"
+indent = { tab-width = 4, unit = "\t"  }
+# language-servers
+grammar = "un"
+# formatter
+
+[language.auto-pairs]
+'(' = ')'
+'[' = ']'
+'"' = '"'
+# 'begin' = 'end' # Maybe when they add support for this
+# 'do' = 'end'
+# 'then' = 'end'
+# 'fn' = 'end'
+
+[[grammar]]
+name = "un"
+source = { git = "https://github.com/ptrrr1/tree-sitter-un", rev = "8ea8e015ff8d85a2e6e349164f7fe0c9cfa0c7f0"  }
+# source = { path = "/home/ptrrr/Dev/tree-sitter-un" }
