@@ -19,7 +19,7 @@ for i in [0..<10] do
 	else
 		if i == 3 then
 			print("test");
-			continue;
+			// continue;
 		else
 			print(i);
 		end

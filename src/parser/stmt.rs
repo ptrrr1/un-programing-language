@@ -10,6 +10,7 @@ use crate::types::{un_callable::UnCallable, value::Value};
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
+    // TODO: Resolve issues with memory size
     Expr(Expr),
     Print(Expr),
     Var {
@@ -41,7 +42,7 @@ pub enum Stmt {
     },
     Return(Expr),
     Break,
-    Continue,
+    // Continue,
 }
 
 impl Stmt {
@@ -123,9 +124,9 @@ impl Stmt {
         Self::Break
     }
 
-    pub fn continue_stmt() -> Self {
-        Self::Continue
-    }
+    // pub fn continue_stmt() -> Self {
+    //     Self::Continue
+    // }
 
     // TODO: Remove panics and reprocess Errors at top level of interpreter
     pub fn eval(&self, env: Rc<RefCell<Enviroment>>) -> Signal {
@@ -201,7 +202,7 @@ impl Stmt {
                         match r {
                             Signal::Return(_) => return r,
                             Signal::Break => break 'outer,
-                            Signal::Continue => continue,
+                            // Signal::Continue => continue, // TODO: Continue; doesn't work
                             Signal::Normal => (),
                         }
                     }
@@ -268,7 +269,7 @@ impl Stmt {
                 Signal::Return(v)
             }
             Stmt::Break => Signal::Break,
-            Stmt::Continue => Signal::Continue,
+            // Stmt::Continue => Signal::Continue,
         }
     }
 }

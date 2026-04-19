@@ -89,8 +89,7 @@ pub enum TokenType {
     Let,
 
     Break,
-    Continue,
-
+    // Continue,
     Comment(String),
     Space,
 }
@@ -146,8 +145,7 @@ impl Display for TokenType {
             TokenType::Let => write!(f, "let"),
 
             TokenType::Break => write!(f, "break"),
-            TokenType::Continue => write!(f, "continue"),
-
+            // TokenType::Continue => write!(f, "continue"),
             TokenType::Comment(c) => write!(f, "{}", c),
             TokenType::Space => write!(f, " "),
         }

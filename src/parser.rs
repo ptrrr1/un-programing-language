@@ -121,7 +121,7 @@ impl Parser {
                 TokenType::For => Self::for_stmt(tokens),
                 TokenType::Return => Self::return_stmt(tokens),
                 TokenType::Break => Self::break_stmt(tokens),
-                TokenType::Continue => Self::continue_stmt(tokens),
+                // TokenType::Continue => Self::continue_stmt(tokens),
                 TokenType::Begin => {
                     // According to the book, this will be reused for functions!
                     let _begin = tokens.next().unwrap(); // I know next is BEGIN
@@ -280,19 +280,19 @@ impl Parser {
         Ok(Stmt::break_stmt())
     }
 
-    fn continue_stmt<I: Iterator<Item = Token>>(
-        tokens: &mut Peekable<I>,
-    ) -> Result<Stmt, Error<ParserError>> {
-        let _cont = tokens.next().unwrap();
+    // fn continue_stmt<I: Iterator<Item = Token>>(
+    //     tokens: &mut Peekable<I>,
+    // ) -> Result<Stmt, Error<ParserError>> {
+    //     let _cont = tokens.next().unwrap();
 
-        Self::consume(
-            tokens,
-            vec![TokenType::Semicolon],
-            ParserError::UnterminatedStmt,
-        )?;
+    //     Self::consume(
+    //         tokens,
+    //         vec![TokenType::Semicolon],
+    //         ParserError::UnterminatedStmt,
+    //     )?;
 
-        Ok(Stmt::continue_stmt())
-    }
+    //     Ok(Stmt::continue_stmt())
+    // }
 
     fn block<I: Iterator<Item = Token>>(
         tokens: &mut Peekable<I>,

@@ -77,7 +77,7 @@ impl Interpreter {
                     eprintln!("Return outside of function")
                 }
                 Signal::Break => eprintln!("Break outside of loop"),
-                Signal::Continue => eprintln!("Continue outside of loop"),
+                // Signal::Continue => eprintln!("Continue outside of loop"),
             }
         }
 

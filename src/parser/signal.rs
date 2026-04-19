@@ -5,7 +5,7 @@ pub enum Signal {
     Normal,
     Return(Value),
     Break,
-    Continue,
+    // Continue,
     // RuntimeError
 }
 

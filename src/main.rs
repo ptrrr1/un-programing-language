@@ -10,6 +10,7 @@ pub mod enviroment;
 pub mod errors;
 pub mod interpreter;
 pub mod parser;
+pub mod resolver;
 pub mod scanner;
 pub mod tokens;
 pub mod types;

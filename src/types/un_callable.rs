@@ -48,7 +48,7 @@ impl Callable for UnCallable {
             match stmt.eval(rc_new_env.clone()) {
                 Signal::Normal => (),
                 Signal::Return(value) => return value,
-                Signal::Break | Signal::Continue => panic!("Handle Err"), // TODO: Handler Err
+                Signal::Break /* | Signal::Continue */ => panic!("Handle Err"), // TODO: Handler Err
             };
         }
 
