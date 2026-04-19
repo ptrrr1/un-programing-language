@@ -1,7 +1,6 @@
 let a := 1;
 begin
 	fn foo()
-	begin
 		print(a);
 	end
 

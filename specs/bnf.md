@@ -6,7 +6,7 @@ DECLARATION ::= FUNC_DECL
               | VAR_DECL
               | STATEMENT
 
-FUNC_DECL ::= "fun" FUNCTION
+FUNC_DECL ::= "fn" FUNCTION
 
 FUNCTION ::= IDENTIFIER "(" PARAMETERS?  ")" DECLARATION* "end"
 
@@ -38,7 +38,7 @@ FOR ::= "for" IDENTIFIER "in" "[" OR ".." ( "<" | ">" )  OR ( ";" OR )? "]" "do"
 
 WHILE ::= "while" OR "do" DECLARATION* "end"
 
-IF ::= "if" EQUALITY "then" DECLARATION* ( "end" | "else" DECLARATION* "end" )
+IF ::= "if" OR "then" DECLARATION* ( "end" | "else" DECLARATION* "end" )
 
 BLOCK ::= "begin" DECLARATION* "end" ";"
 
@@ -70,7 +70,7 @@ TERM ::= FACTOR ( ( "+" | "-" ) FACTOR )*
 
 FACTOR ::= UNARY ( ( "/" | "*" ) UNARY )\*
 
-UNARY ::= ( "not" | "-" ) UNARY | PRIMARY
+UNARY ::= ( "not" | "-" ) UNARY | CALL
 
 CALL ::= PRIMARY ( "(" ARGUMENTS?  ")" )*
 
@@ -84,8 +84,7 @@ PRIMARY ::= LITERAL
           | IDENTIFIER
           | CONDITIONAL
 
-CONDITIONAL ::= "if" OR "then" OR "else" OR "end"
-              | OR
+CONDITIONAL ::= "if" OR "then" LAMBDA  "else" LAMBDA "end"
 ```
 
 <!--

@@ -550,10 +550,10 @@ impl Parser {
         let condition = Self::or(tokens)?;
 
         Self::consume(tokens, vec![TokenType::Then], ParserError::MissingThenToken)?;
-        let true_branch = Self::or(tokens)?;
+        let true_branch = Self::lambda(tokens)?;
 
         Self::consume(tokens, vec![TokenType::Else], ParserError::MissingElseToken)?;
-        let false_branch = Self::or(tokens)?;
+        let false_branch = Self::lambda(tokens)?;
 
         // NOTE: Might remove for conditional expression...
         Self::consume(

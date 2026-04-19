@@ -1,16 +1,16 @@
-//fn fib_iter(n)
-//	let a := 0;
-//	let b := 1;
-//	let aux := 0;
-//
-//	for i in [0..<n] do
-//		aux = a;
-//		a = b;
-//		b = b + aux;
-//	end
-//
-//	return a;
-//end
+fn fib_iter(n)
+	let a := 0;
+	let b := 1;
+	let aux := 0;
+
+	for i in [0..<n] do
+		aux = a;
+		a = b;
+		b = b + aux;
+	end
+
+	return a;
+end
 
 fn fib_rec(n)
 	if n < 2 then
@@ -20,6 +20,6 @@ fn fib_rec(n)
 	end
 end
 
-// print(fib_iter(24));
+print(fib_iter(24));
 
-print(fib_rec(30));
+// print(fib_rec(30));

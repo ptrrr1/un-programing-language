@@ -87,8 +87,10 @@ impl Stmt {
     ) -> Self {
         let s = match step {
             Some(t) => t,
-            // TODO: Find the position I guess...
-            None => Expr::literal(Token::new(TokenType::Number(1.0), (0, 0))),
+            None if matches!(condition.token_type, TokenType::Greater) => {
+                Expr::literal(Token::new(TokenType::Number(-1.0), condition.line))
+            }
+            None => Expr::literal(Token::new(TokenType::Number(1.0), condition.line)),
         };
 
         Self::For {
@@ -199,7 +201,7 @@ impl Stmt {
                         match r {
                             Signal::Return(_) => return r,
                             Signal::Break => break 'outer,
-                            Signal::Continue => continue 'outer,
+                            Signal::Continue => continue,
                             Signal::Normal => (),
                         }
                     }
