@@ -2,7 +2,8 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use crate::{
     enviroment::Enviroment,
-    parser::{signal::Signal, stmt::Stmt},
+    interpreter::Interpreter,
+    stmt::{Stmt, signal::Signal},
     tokens::{Token, TokenType},
 };
 
@@ -33,7 +34,7 @@ impl UnCallable {
 }
 
 impl Callable for UnCallable {
-    fn call(&self, args: Vec<Value>) -> Value {
+    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Value {
         let mut new_env = Enviroment::default();
         new_env.set_outer(self.env.clone());
 
@@ -45,7 +46,7 @@ impl Callable for UnCallable {
 
         let rc_new_env = Rc::new(RefCell::new(new_env));
         for stmt in &self.body {
-            match stmt.eval(rc_new_env.clone()) {
+            match stmt.eval(rc_new_env.clone(), interpreter) {
                 Signal::Normal => (),
                 Signal::Return(value) => return value,
                 Signal::Break /* | Signal::Continue */ => panic!("Handle Err"), // TODO: Handler Err

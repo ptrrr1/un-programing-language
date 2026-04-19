@@ -1,17 +1,11 @@
+use crate::enviroment::Enviroment;
+use crate::{parser::Parser, scanner::Scanner, stmt::signal::Signal, tokens::TokenType};
+use std::{cell::RefCell, rc::Rc};
 use std::{
-    cell::RefCell,
     fs::File,
     io::{self, BufReader, Write},
     path::Path,
     process::exit,
-    rc::Rc,
-};
-
-use crate::{
-    enviroment::Enviroment,
-    parser::{Parser, signal::Signal},
-    scanner::Scanner,
-    tokens::TokenType,
 };
 
 #[derive(Debug, Default)]
@@ -20,13 +14,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn with_exposed(env: Enviroment) -> Self {
-        Interpreter {
-            env: Rc::new(RefCell::new(Enviroment::with_outer(env))),
-        }
-    }
-
-    pub fn run_file(&self, file_path: &String) -> io::Result<()> {
+    pub fn run_file(&mut self, file_path: &String) -> io::Result<()> {
         let file_path = Path::new(file_path);
         let mut buffer = Self::read_file(file_path).unwrap_or_else(|err| {
             eprintln!("{}", err);
@@ -67,7 +55,7 @@ impl Interpreter {
 
         for stmt in parser_result.into_stmt() {
             // dbg!(&stmt);
-            let s = stmt.eval(self.env.clone());
+            let s = stmt.eval(self.env.clone(), self);
             // dbg!(&s);
 
             match s {
@@ -97,8 +85,7 @@ impl Interpreter {
             ))
         }
     }
-
-    pub fn run_prompt() -> io::Result<()> {
+    pub fn run_prompt(&mut self) -> io::Result<()> {
         let stdin = io::stdin();
         let mut stdout = io::stdout();
 

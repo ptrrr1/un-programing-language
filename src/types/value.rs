@@ -1,16 +1,6 @@
+use crate::{tokens::TokenType, types::Types};
 use core::fmt;
 use std::{fmt::Display, rc::Rc};
-
-use crate::tokens::TokenType;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Types {
-    Bool,
-    Number,
-    String,
-    Callable,
-    Nil,
-}
 
 #[derive(Debug, Clone)]
 pub enum Value {

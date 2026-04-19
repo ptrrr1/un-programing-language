@@ -1,16 +1,12 @@
 use std::iter::Peekable;
 
-use expr::Expr;
-use stmt::Stmt;
+use crate::expr::Expr;
+use crate::stmt::Stmt;
 
 use crate::{
     errors::{Error, Pos, parser_errors::ParserError},
     tokens::{Token, TokenType},
 };
-
-pub mod expr;
-pub mod signal;
-pub mod stmt;
 
 #[derive(Debug, Default)]
 pub struct ParserResult {

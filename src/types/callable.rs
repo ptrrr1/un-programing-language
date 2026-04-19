@@ -1,9 +1,11 @@
 use std::fmt::{Debug, Display};
 
+use crate::interpreter::Interpreter;
+
 use super::value::Value;
 
 pub trait Callable: Debug + Display {
-    fn call(&self, args: Vec<Value>) -> Value;
+    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Value;
     fn arity(&self) -> usize;
     fn is_variable_arity(&self) -> bool;
 }

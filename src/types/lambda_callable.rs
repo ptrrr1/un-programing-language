@@ -2,7 +2,8 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use crate::{
     enviroment::Enviroment,
-    parser::expr::Expr,
+    expr::Expr,
+    interpreter::Interpreter,
     tokens::{Token, TokenType},
 };
 
@@ -22,7 +23,7 @@ impl LambdaCallable {
 }
 
 impl Callable for LambdaCallable {
-    fn call(&self, args: Vec<Value>) -> Value {
+    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Value {
         let mut new_env = Enviroment::default();
         new_env.set_outer(self.env.clone());
 
@@ -34,7 +35,7 @@ impl Callable for LambdaCallable {
 
         let rc_new_env = Rc::new(RefCell::new(new_env));
 
-        self.body.eval(rc_new_env)
+        self.body.eval(rc_new_env, interpreter)
     }
 
     fn arity(&self) -> usize {
