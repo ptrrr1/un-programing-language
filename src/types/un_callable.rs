@@ -46,7 +46,7 @@ impl Callable for UnCallable {
 
         let rc_new_env = Rc::new(RefCell::new(new_env));
         for stmt in &self.body {
-            match stmt.eval(rc_new_env.clone(), interpreter) {
+            match stmt.accept(rc_new_env.clone(), interpreter) {
                 Signal::Normal => (),
                 Signal::Return(value) => return value,
                 Signal::Break /* | Signal::Continue */ => panic!("Handle Err"), // TODO: Handler Err

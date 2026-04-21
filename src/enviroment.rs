@@ -34,6 +34,40 @@ impl Enviroment {
         None
     }
 
+    pub fn get_at(env: Rc<RefCell<Enviroment>>, identifier: &str, depth: usize) -> Value {
+        let env = Self::ancestor(env, depth);
+        env.borrow()
+            .variables
+            .borrow()
+            .get(identifier)
+            .unwrap()
+            .clone() // TODO: Reexamine again...
+    }
+
+    pub fn define_at(env: Rc<RefCell<Enviroment>>, identifier: &str, v: Value, depth: usize) {
+        let env = Self::ancestor(env, depth);
+        env.borrow()
+            .variables
+            .borrow_mut()
+            .insert(identifier.to_string(), v);
+    }
+
+    fn ancestor(env: Rc<RefCell<Enviroment>>, depth: usize) -> Rc<RefCell<Enviroment>> {
+        let mut cur = env;
+
+        for _ in 0..depth {
+            let next = {
+                let borrowed = cur.borrow();
+                borrowed.outer.clone()
+            };
+
+            // TODO: Fix
+            cur = next.expect("Idk it's late");
+        }
+
+        cur
+    }
+
     pub fn update_var(&self, identifier: &str, val: Value) -> Option<Value> {
         if self.variables.borrow().contains_key(identifier) {
             return self
@@ -52,5 +86,9 @@ impl Enviroment {
 
     pub fn set_outer(&mut self, outer: Rc<RefCell<Enviroment>>) {
         self.outer = Some(outer);
+    }
+
+    pub fn outer(&self) -> Option<&Rc<RefCell<Enviroment>>> {
+        self.outer.as_ref()
     }
 }

@@ -8,94 +8,53 @@ use crate::{
     types::{lambda_callable::LambdaCallable, value::Value},
 };
 
-pub trait ExprVisitor<R> {
-    fn visit_assignment(
-        &mut self,
-        env: Rc<RefCell<Enviroment>>,
-        target: &Rc<Expr>,
-        expr: &Rc<Expr>,
-    ) -> R;
+pub trait ExprVisitor<R, E> {
+    fn visit_assignment(&mut self, env: Rc<RefCell<E>>, target: &Expr, expr: &Expr) -> R;
     fn visit_binary(
         &mut self,
-        env: Rc<RefCell<Enviroment>>,
-        left: &Rc<Expr>,
+        env: Rc<RefCell<E>>,
+        left: &Expr,
         operator: &Token,
-        right: &Rc<Expr>,
+        right: &Expr,
     ) -> R;
-    fn visit_unary(
-        &mut self,
-        env: Rc<RefCell<Enviroment>>,
-        operator: &Token,
-        right: &Rc<Expr>,
-    ) -> R;
-    fn visit_grouping(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Rc<Expr>) -> R;
-    fn visit_literal(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Token) -> R;
-    fn visit_variable(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Token) -> R;
-    fn visit_exposed_fn(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Token) -> R;
+    fn visit_unary(&mut self, env: Rc<RefCell<E>>, operator: &Token, right: &Expr) -> R;
+    fn visit_grouping(&mut self, env: Rc<RefCell<E>>, inner: &Expr) -> R;
+    fn visit_literal(&mut self, env: Rc<RefCell<E>>, inner: &Token) -> R;
+    fn visit_variable(&mut self, env: Rc<RefCell<E>>, inner: &Token) -> R;
+    fn visit_exposed_fn(&mut self, env: Rc<RefCell<E>>, inner: &Token) -> R;
     fn visit_conditional(
         &mut self,
-        env: Rc<RefCell<Enviroment>>,
-        condition: &Rc<Expr>,
-        true_branch: &Rc<Expr>,
-        false_branch: &Rc<Expr>,
+        env: Rc<RefCell<E>>,
+        condition: &Expr,
+        true_branch: &Expr,
+        false_branch: &Expr,
     ) -> R;
-    fn visit_call(
-        &mut self,
-        env: Rc<RefCell<Enviroment>>,
-        callee: &Rc<Expr>,
-        paren: &Token,
-        args: &[Expr],
-    ) -> R;
-    fn visit_lambda(
-        &mut self,
-        env: Rc<RefCell<Enviroment>>,
-        params: &[Token],
-        body: &Rc<Expr>,
-    ) -> R;
+    fn visit_call(&mut self, env: Rc<RefCell<E>>, callee: &Expr, paren: &Token, args: &[Expr])
+    -> R;
+    fn visit_lambda(&mut self, env: Rc<RefCell<E>>, params: &[Token], body: &Expr) -> R;
 }
 
-impl Expr {
-    pub fn eval<R>(&self, env: Rc<RefCell<Enviroment>>, visitor: &mut impl ExprVisitor<R>) -> R {
-        match self {
-            Expr::Assignment { target, expr } => visitor.visit_assignment(env, target, expr),
-            Expr::Binary {
-                left,
-                operator,
-                right,
-            } => visitor.visit_binary(env, left, operator, right),
-            Expr::Unary { operator, right } => visitor.visit_unary(env, operator, right),
-            Expr::Grouping(expr) => visitor.visit_grouping(env, expr),
-            Expr::Literal(token) => visitor.visit_literal(env, token),
-            Expr::Variable(token) => visitor.visit_variable(env, token),
-            Expr::ExposedFn(token) => visitor.visit_exposed_fn(env, token),
-            Expr::Conditional {
-                condition,
-                true_branch,
-                false_branch,
-            } => visitor.visit_conditional(env, condition, true_branch, false_branch),
-            Expr::Call {
-                callee,
-                paren,
-                args,
-            } => visitor.visit_call(env, callee, paren, args),
-            Expr::Lambda { params, body } => visitor.visit_lambda(env, params, body),
-        }
-    }
-}
-
-impl ExprVisitor<Value> for Interpreter {
+impl ExprVisitor<Value, Enviroment> for Interpreter {
     fn visit_assignment(
         &mut self,
         env: Rc<RefCell<Enviroment>>,
-        target: &Rc<Expr>,
-        expr: &Rc<Expr>,
+        target: &Expr,
+        expr: &Expr,
     ) -> Value {
-        let val = expr.eval(env.clone(), self);
+        let val = expr.accept(env.clone(), self);
 
-        match target.as_ref() {
+        match target {
             Expr::Variable(token) => match &token.token_type {
                 TokenType::Identifier(s) => {
-                    env.borrow().clone().update_var(s, val.clone());
+                    match self.locals.get(s) {
+                        Some(depth) => {
+                            Enviroment::define_at(env, s, val.clone(), *depth);
+                        }
+                        None => {
+                            self.env.borrow_mut().update_var(s, val.clone());
+                        }
+                    }
+
                     val
                 }
                 _ => unreachable!(),
@@ -107,39 +66,39 @@ impl ExprVisitor<Value> for Interpreter {
     fn visit_binary(
         &mut self,
         env: Rc<RefCell<Enviroment>>,
-        left: &Rc<Expr>,
+        left: &Expr,
         operator: &Token,
-        right: &Rc<Expr>,
+        right: &Expr,
     ) -> Value {
-        let l = left.eval(env.clone(), self);
+        let l = left.accept(env.clone(), self);
 
         match operator.token_type {
             TokenType::Or => {
                 if l.get_truthyness() {
                     l
                 } else {
-                    right.eval(env.clone(), self)
+                    right.accept(env.clone(), self)
                 }
             }
             TokenType::And => {
                 if l.get_truthyness() {
-                    right.eval(env, self)
+                    right.accept(env, self)
                 } else {
                     l
                 }
             }
             TokenType::EqualEqual => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 Value::Bool(l == r)
             }
             TokenType::BangEqual => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 Value::Bool(l != r)
             }
             TokenType::Lesser => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 if l.get_type() != r.get_type() {
                     panic!("PartialOrd for Different Types");
@@ -148,7 +107,7 @@ impl ExprVisitor<Value> for Interpreter {
                 Value::Bool(l < r)
             }
             TokenType::LesserEqual => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 if l.get_type() != r.get_type() {
                     panic!("PartialOrd for Different Types");
@@ -157,7 +116,7 @@ impl ExprVisitor<Value> for Interpreter {
                 Value::Bool(l <= r)
             }
             TokenType::Greater => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 if l.get_type() != r.get_type() {
                     panic!("PartialOrd for Different Types");
@@ -166,7 +125,7 @@ impl ExprVisitor<Value> for Interpreter {
                 Value::Bool(l > r)
             }
             TokenType::GreaterEqual => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 if l.get_type() != r.get_type() {
                     panic!("PartialOrd for Different Types");
@@ -175,7 +134,7 @@ impl ExprVisitor<Value> for Interpreter {
                 Value::Bool(l >= r)
             }
             TokenType::Plus => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 match (l, r) {
                     (Value::Number(left), Value::Number(right)) => Value::Number(left + right),
@@ -186,7 +145,7 @@ impl ExprVisitor<Value> for Interpreter {
                 }
             }
             TokenType::Minus => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 match (l, r) {
                     (Value::Number(left), Value::Number(right)) => Value::Number(left - right),
@@ -196,7 +155,7 @@ impl ExprVisitor<Value> for Interpreter {
                 }
             }
             TokenType::Star => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 match (l, r) {
                     (Value::Number(left), Value::Number(right)) => Value::Number(left * right),
@@ -206,7 +165,7 @@ impl ExprVisitor<Value> for Interpreter {
                 }
             }
             TokenType::Slash => {
-                let r = right.eval(env, self);
+                let r = right.accept(env, self);
 
                 match (l, r) {
                     (Value::Number(left), Value::Number(right)) => Value::Number(left / right),
@@ -223,9 +182,9 @@ impl ExprVisitor<Value> for Interpreter {
         &mut self,
         env: Rc<RefCell<Enviroment>>,
         operator: &Token,
-        right: &Rc<Expr>,
+        right: &Expr,
     ) -> Value {
-        let r = right.eval(env, self);
+        let r = right.accept(env, self);
 
         match operator.token_type {
             TokenType::Minus => match r {
@@ -237,8 +196,8 @@ impl ExprVisitor<Value> for Interpreter {
         }
     }
 
-    fn visit_grouping(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Rc<Expr>) -> Value {
-        inner.eval(env, self)
+    fn visit_grouping(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Expr) -> Value {
+        inner.accept(env, self)
     }
 
     fn visit_literal(&mut self, _env: Rc<RefCell<Enviroment>>, inner: &Token) -> Value {
@@ -246,11 +205,8 @@ impl ExprVisitor<Value> for Interpreter {
     }
 
     fn visit_variable(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Token) -> Value {
-        match inner.get_token_type() {
-            TokenType::Identifier(s) => match env.borrow().get_var_val(&s) {
-                Some(v) => v,
-                None => panic!("Undefined Variable"),
-            },
+        match &inner.token_type {
+            TokenType::Identifier(s) => self.look_up_var(env.clone(), s),
             _ => unreachable!(),
         }
     }
@@ -263,30 +219,30 @@ impl ExprVisitor<Value> for Interpreter {
     fn visit_conditional(
         &mut self,
         env: Rc<RefCell<Enviroment>>,
-        condition: &Rc<Expr>,
-        true_branch: &Rc<Expr>,
-        false_branch: &Rc<Expr>,
+        condition: &Expr,
+        true_branch: &Expr,
+        false_branch: &Expr,
     ) -> Value {
-        let c = condition.eval(env.clone(), self);
+        let c = condition.accept(env.clone(), self);
         if c.get_truthyness() {
-            true_branch.eval(env.clone(), self)
+            true_branch.accept(env.clone(), self)
         } else {
-            false_branch.eval(env.clone(), self)
+            false_branch.accept(env.clone(), self)
         }
     }
 
     fn visit_call(
         &mut self,
         env: Rc<RefCell<Enviroment>>,
-        callee: &Rc<Expr>,
+        callee: &Expr,
         _paren: &Token,
         args: &[Expr],
     ) -> Value {
-        let eval_callee = callee.eval(env.clone(), self);
+        let eval_callee = callee.accept(env.clone(), self);
 
         let mut eval_args: Vec<Value> = vec![];
         for arg in args {
-            eval_args.push(arg.eval(env.clone(), self));
+            eval_args.push(arg.accept(env.clone(), self));
         }
 
         match eval_callee {
@@ -307,7 +263,7 @@ impl ExprVisitor<Value> for Interpreter {
         &mut self,
         env: Rc<RefCell<Enviroment>>,
         params: &[Token],
-        body: &Rc<Expr>,
+        body: &Expr,
     ) -> Value {
         let lambda = LambdaCallable::new(params.to_vec(), body.clone(), env.clone());
 

@@ -228,9 +228,50 @@ impl Parser {
 
         let stmts = Self::block(tokens)?;
 
-        Ok(Stmt::for_stmt(
+        Ok(Self::desugar_for(
             identifier, start, end, step, condition, stmts,
         ))
+    }
+
+    fn desugar_for(
+        identifier: Token,
+        start: Expr,
+        end: Expr,
+        step: Option<Expr>,
+        condition: Token,
+        stmts: Vec<Stmt>,
+    ) -> Stmt {
+        let var_decl = Stmt::var(identifier.clone(), start.clone());
+
+        let s = match step {
+            Some(t) => t,
+            None if matches!(condition.token_type, TokenType::Greater) => {
+                Expr::literal(Token::new(TokenType::Number(-1.0), condition.line))
+            }
+            None => Expr::literal(Token::new(TokenType::Number(1.0), condition.line)),
+        };
+
+        let st = Stmt::expr(Expr::assignment(
+            Expr::variable(identifier.clone()),
+            Expr::binary(
+                Expr::variable(identifier.clone()),
+                Token::new(TokenType::Plus, (0, 0)), // TODO: Handle this pos
+                s,
+            ),
+        ));
+
+        let mut stmts_cl = stmts.to_vec();
+        stmts_cl.push(st);
+
+        let condition = Expr::binary(
+            Expr::variable(identifier.clone()),
+            condition.clone(),
+            end.clone(),
+        );
+
+        let while_stmt = Stmt::while_stmt(condition, stmts_cl);
+
+        Stmt::block(vec![var_decl, while_stmt])
     }
 
     fn return_stmt<I: Iterator<Item = Token>>(

@@ -12,12 +12,12 @@ use super::{callable::Callable, value::Value};
 #[derive(Debug)]
 pub struct LambdaCallable {
     params: Vec<Token>,
-    body: Rc<Expr>,
+    body: Expr,
     env: Rc<RefCell<Enviroment>>,
 }
 
 impl LambdaCallable {
-    pub fn new(params: Vec<Token>, body: Rc<Expr>, env: Rc<RefCell<Enviroment>>) -> Self {
+    pub fn new(params: Vec<Token>, body: Expr, env: Rc<RefCell<Enviroment>>) -> Self {
         Self { params, body, env }
     }
 }
@@ -35,7 +35,7 @@ impl Callable for LambdaCallable {
 
         let rc_new_env = Rc::new(RefCell::new(new_env));
 
-        self.body.eval(rc_new_env, interpreter)
+        self.body.accept(rc_new_env, interpreter)
     }
 
     fn arity(&self) -> usize {

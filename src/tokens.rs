@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
     pub line: (usize, usize),
@@ -30,7 +30,7 @@ pub enum TokenType {
     LeftBracket,
     RightBracket,
     Comma,
-    Dot, // UNUSED
+    Dot,
     Semicolon,
     Minus,
     Plus,

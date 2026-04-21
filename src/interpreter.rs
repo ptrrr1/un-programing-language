@@ -1,5 +1,8 @@
 use crate::enviroment::Enviroment;
+use crate::stmt::resolver::Resolver;
+use crate::types::value::Value;
 use crate::{parser::Parser, scanner::Scanner, stmt::signal::Signal, tokens::TokenType};
+use std::collections::HashMap;
 use std::{cell::RefCell, rc::Rc};
 use std::{
     fs::File,
@@ -10,10 +13,22 @@ use std::{
 
 #[derive(Debug, Default)]
 pub struct Interpreter {
-    env: Rc<RefCell<Enviroment>>,
+    pub env: Rc<RefCell<Enviroment>>,
+    pub locals: HashMap<String, usize>,
 }
 
 impl Interpreter {
+    pub fn look_up_var(&mut self, env: Rc<RefCell<Enviroment>>, identifier: &str) -> Value {
+        match self.locals.get(identifier) {
+            Some(depth) => Enviroment::get_at(env, identifier, *depth),
+            None => self
+                .env
+                .borrow()
+                .get_var_val(&identifier.to_string())
+                .unwrap(), // TODO: More todo.. fix this or think about it
+        }
+    }
+
     pub fn run_file(&mut self, file_path: &String) -> io::Result<()> {
         let file_path = Path::new(file_path);
         let mut buffer = Self::read_file(file_path).unwrap_or_else(|err| {
@@ -51,20 +66,28 @@ impl Interpreter {
             exit(70);
         }
 
+        let stmts = parser_result.into_stmt();
+
         // dbg!(&parser_result);
 
-        for stmt in parser_result.into_stmt() {
+        // TODO: Try to understand it better
+        let mut resolver = Resolver::default();
+        resolver.resolve_stmts(&stmts);
+        let locals = resolver.into_locals();
+        self.locals = locals;
+
+        for stmt in stmts {
             // dbg!(&stmt);
-            let s = stmt.eval(self.env.clone(), self);
+            let s = stmt.accept(self.env.clone(), self);
             // dbg!(&s);
 
             match s {
                 Signal::Normal => continue,
                 Signal::Return(_val) => {
                     // TODO: Improve
-                    eprintln!("Return outside of function")
+                    panic!("Return outside of function")
                 }
-                Signal::Break => eprintln!("Break outside of loop"),
+                Signal::Break => panic!("Break outside of loop"),
                 // Signal::Continue => eprintln!("Continue outside of loop"),
             }
         }

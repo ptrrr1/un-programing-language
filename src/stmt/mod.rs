@@ -1,9 +1,13 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     expr::Expr,
+    stmt::eval::StmtVisitor,
     tokens::{Token, TokenType},
 };
 
 pub mod eval;
+pub mod resolver;
 pub mod signal;
 
 #[derive(Debug, Clone)]
@@ -12,24 +16,16 @@ pub enum Stmt {
     Print(Expr),
     Var {
         target: Token,
-        expr: Expr,
+        expr: Box<Expr>,
     },
     Block(Vec<Stmt>),
     Conditional {
-        condition: Expr,
+        condition: Box<Expr>,
         true_branch: Vec<Stmt>,
         false_branch: Option<Vec<Stmt>>,
     },
     While {
-        condition: Expr,
-        stmts: Vec<Stmt>,
-    },
-    For {
-        identifier: Token,
-        start: Expr,
-        end: Expr,
-        step: Expr,
-        condition: Token,
+        condition: Box<Expr>,
         stmts: Vec<Stmt>,
     },
     Function {
@@ -52,7 +48,10 @@ impl Stmt {
     }
 
     pub fn var(target: Token, expr: Expr) -> Self {
-        Self::Var { target, expr }
+        Self::Var {
+            target,
+            expr: Box::new(expr),
+        }
     }
 
     pub fn block(stmts: Vec<Stmt>) -> Self {
@@ -65,38 +64,15 @@ impl Stmt {
         false_branch: Option<Vec<Stmt>>,
     ) -> Self {
         Self::Conditional {
-            condition,
+            condition: Box::new(condition),
             true_branch,
             false_branch,
         }
     }
 
     pub fn while_stmt(condition: Expr, stmts: Vec<Stmt>) -> Self {
-        Self::While { condition, stmts }
-    }
-
-    pub fn for_stmt(
-        identifier: Token,
-        start: Expr,
-        end: Expr,
-        step: Option<Expr>,
-        condition: Token,
-        stmts: Vec<Stmt>,
-    ) -> Self {
-        let s = match step {
-            Some(t) => t,
-            None if matches!(condition.token_type, TokenType::Greater) => {
-                Expr::literal(Token::new(TokenType::Number(-1.0), condition.line))
-            }
-            None => Expr::literal(Token::new(TokenType::Number(1.0), condition.line)),
-        };
-
-        Self::For {
-            identifier,
-            start,
-            end,
-            step: s,
-            condition,
+        Self::While {
+            condition: Box::new(condition),
             stmts,
         }
     }
@@ -124,4 +100,26 @@ impl Stmt {
     // pub fn continue_stmt() -> Self {
     //     Self::Continue
     // }
+
+    pub fn accept<R, E>(&self, env: Rc<RefCell<E>>, visitor: &mut impl StmtVisitor<R, E>) -> R {
+        match self {
+            Stmt::Expr(expr) => visitor.visit_expr(env, expr),
+            Stmt::Print(expr) => visitor.visit_print(env, expr),
+            Stmt::Var { target, expr } => visitor.visit_var(env, target, expr),
+            Stmt::Block(stmts) => visitor.visit_block(env, stmts),
+            Stmt::Conditional {
+                condition,
+                true_branch,
+                false_branch,
+            } => visitor.visit_conditional(env, condition, true_branch, false_branch),
+            Stmt::While { condition, stmts } => visitor.visit_while(env, condition, stmts),
+            Stmt::Function {
+                identifier,
+                params,
+                body,
+            } => visitor.visit_function(env, identifier, params, body),
+            Stmt::Return(expr) => visitor.visit_return(env, expr),
+            Stmt::Break => visitor.visit_break(),
+        }
+    }
 }
