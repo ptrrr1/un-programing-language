@@ -21,7 +21,6 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Literal(Token),
     Variable(Token),
-    ExposedFn(Token),
     Conditional {
         condition: Box<Expr>,
         true_branch: Box<Expr>,
@@ -73,10 +72,6 @@ impl Expr {
         Expr::Variable(token)
     }
 
-    pub fn exposed_fn(token: Token) -> Expr {
-        Expr::ExposedFn(token)
-    }
-
     pub fn conditional(condition: Expr, true_branch: Expr, false_branch: Expr) -> Expr {
         Expr::Conditional {
             condition: Box::new(condition),
@@ -112,7 +107,6 @@ impl Expr {
             Expr::Grouping(expr) => visitor.visit_grouping(env, expr),
             Expr::Literal(token) => visitor.visit_literal(env, token),
             Expr::Variable(token) => visitor.visit_variable(env, token),
-            Expr::ExposedFn(token) => visitor.visit_exposed_fn(env, token),
             Expr::Conditional {
                 condition,
                 true_branch,

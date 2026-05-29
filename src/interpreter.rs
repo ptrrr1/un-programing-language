@@ -108,6 +108,7 @@ impl Interpreter {
             ))
         }
     }
+
     pub fn run_prompt(&mut self) -> io::Result<()> {
         let stdin = io::stdin();
         let mut stdout = io::stdout();
@@ -127,7 +128,6 @@ impl Interpreter {
                         let scanner_result = Scanner::scan_line(buf, 0);
 
                         if scanner_result.has_err() {
-                            // println!("{:#?}", scanner_result.into_err());
                             scanner_result
                                 .into_err()
                                 .into_iter()
@@ -135,23 +135,20 @@ impl Interpreter {
                             continue;
                         }
 
-                        let tokens = scanner_result
-                            .into_tokens()
-                            .into_iter()
-                            .filter(|t| !matches!(t.token_type, TokenType::Space));
+                        let tokens = scanner_result.into_tokens().into_iter();
                         // println!(":: {:#?}", &tokens);
 
                         let parser_result = Parser::parse_tokens(tokens);
                         println!(":: {:#?}", &parser_result);
 
-                        if parser_result.has_err() {
-                            // println!("{:#?}", parser_result.into_err());
-                            parser_result
-                                .into_err()
-                                .into_iter()
-                                .for_each(|e| println!("{}", e));
-                            continue;
-                        }
+                        // if parser_result.has_err() {
+                        //     // println!("{:#?}", parser_result.into_err());
+                        //     parser_result
+                        //         .into_err()
+                        //         .into_iter()
+                        //         .for_each(|e| println!("{}", e));
+                        //     continue;
+                        // }
 
                         // TODO: In case no err, add stmt to vec! and run them
                     }

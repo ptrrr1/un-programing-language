@@ -553,11 +553,6 @@ impl Parser {
             return Ok(Expr::literal(t));
         }
 
-        // Exposed Fn
-        if let Some(t) = tokens.next_if(|t| matches!(t.token_type, TokenType::ExposedFunction(_))) {
-            return Ok(Expr::exposed_fn(t));
-        }
-
         // Identifier
         if let Some(t) = tokens.next_if(|t| matches!(t.token_type, TokenType::Identifier(_))) {
             return Ok(Expr::variable(t));

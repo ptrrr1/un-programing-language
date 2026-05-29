@@ -61,7 +61,6 @@ pub enum TokenType {
     // the String i'm using to generate the tokens during Scanning then
     // I can't make sure that it will live till the end of the program
     Identifier(String),
-    ExposedFunction(String),
     String(String),
     Number(f64),
 
@@ -120,7 +119,6 @@ impl Display for TokenType {
             TokenType::DotDot => write!(f, ".."),
 
             TokenType::Identifier(name) => write!(f, "{}", name),
-            TokenType::ExposedFunction(name) => write!(f, "exposed_fn({})", name),
             TokenType::String(s) => write!(f, "\"{}\"", s),
             TokenType::Number(n) => write!(f, "{}", n),
 

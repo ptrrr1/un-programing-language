@@ -6,7 +6,7 @@ use crate::{
 };
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-type Scope = HashMap<String, bool>;
+type Scope = HashMap<String, bool>; // TODO: Extend to an Enum to check if a variable has be declared but not read
 
 #[derive(Default)]
 pub struct Resolver {
@@ -178,7 +178,6 @@ impl ExprVisitor<(), Scope> for Resolver {
     fn visit_assignment(&mut self, _env: Rc<RefCell<Scope>>, target: &Expr, expr: &Expr) {
         self.resolve_expr(expr);
 
-        // TODO: This feels like bullshit, maybe i don't know how to use rust
         if let Expr::Variable(t) = target
             && let TokenType::Identifier(s) = &t.token_type
         {
@@ -216,10 +215,6 @@ impl ExprVisitor<(), Scope> for Resolver {
             }
             self.resolve_local(s);
         }
-    }
-
-    fn visit_exposed_fn(&mut self, _env: Rc<RefCell<Scope>>, _inner: &Token) {
-        todo!() // TODO: Figure this out?
     }
 
     fn visit_conditional(

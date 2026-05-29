@@ -21,7 +21,6 @@ pub trait ExprVisitor<R, E> {
     fn visit_grouping(&mut self, env: Rc<RefCell<E>>, inner: &Expr) -> R;
     fn visit_literal(&mut self, env: Rc<RefCell<E>>, inner: &Token) -> R;
     fn visit_variable(&mut self, env: Rc<RefCell<E>>, inner: &Token) -> R;
-    fn visit_exposed_fn(&mut self, env: Rc<RefCell<E>>, inner: &Token) -> R;
     fn visit_conditional(
         &mut self,
         env: Rc<RefCell<E>>,
@@ -209,11 +208,6 @@ impl ExprVisitor<Value, Enviroment> for Interpreter {
             TokenType::Identifier(s) => self.look_up_var(env.clone(), s),
             _ => unreachable!(),
         }
-    }
-
-    // TODO: Deal with it...
-    fn visit_exposed_fn(&mut self, _env: Rc<RefCell<Enviroment>>, _innerr: &Token) -> Value {
-        todo!()
     }
 
     fn visit_conditional(
