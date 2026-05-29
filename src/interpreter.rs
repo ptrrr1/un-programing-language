@@ -49,7 +49,7 @@ impl Interpreter {
         let tokens = scanner_result.into_tokens().into_iter().filter(|t| {
             !matches!(
                 t.token_type,
-                TokenType::Space | TokenType::CommentStarter | TokenType::Comment(_)
+                TokenType::CommentStarter | TokenType::Comment(_)
             )
         });
         // println!(":: {:#?}", &tokens);
@@ -135,8 +135,13 @@ impl Interpreter {
                             continue;
                         }
 
-                        let tokens = scanner_result.into_tokens().into_iter();
-                        // println!(":: {:#?}", &tokens);
+                        let tokens = scanner_result.into_tokens().into_iter().filter(|t| {
+                            !matches!(
+                                t.token_type,
+                                TokenType::CommentStarter | TokenType::Comment(_)
+                            )
+                        });
+                        println!(":: {:#?}", &tokens);
 
                         let parser_result = Parser::parse_tokens(tokens);
                         println!(":: {:#?}", &parser_result);

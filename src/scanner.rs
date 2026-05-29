@@ -144,8 +144,16 @@ impl Scanner {
         while let Some(&(pos_h, char)) = chars.peek() {
             match char {
                 '.' => {
+                    // Expecting .. (DotDot)
+                    let ch = chars.peek().map(|(_, c)| *c).unwrap();
+                    if Self::makes_token_with_next(chars, &ch.to_string()).is_some() {
+                        scanner_result.add_token((pos_v, pos_h), &literal);
+                        break;
+                    }
+
                     let (pos_hi, ch) = chars.next().unwrap();
 
+                    // case of _.
                     if seen_underscore {
                         scanner_result.errors.push(Error::new(
                             Pos::Known(pos_v, pos_hi.saturating_sub(1)),
@@ -166,6 +174,7 @@ impl Scanner {
                 '_' => {
                     let (pos_hi, ch) = chars.next().unwrap();
 
+                    // case of ._
                     if literal.ends_with(".") {
                         scanner_result.errors.push(Error::new(
                             Pos::Known(pos_v, pos_hi),
@@ -182,7 +191,7 @@ impl Scanner {
                 }
 
                 _ => {
-                    if !char.is_whitespace() && char != ';' {
+                    if char.is_ascii_alphabetic() {
                         scanner_result.errors.push(Error::new(
                             Pos::Known(pos_v, pos_h),
                             ScannerError::MissingSeparation,
