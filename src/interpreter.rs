@@ -1,4 +1,5 @@
 use crate::enviroment::Enviroment;
+use crate::expr::Expr;
 use crate::stmt::resolver::Resolver;
 use crate::types::value::Value;
 use crate::{parser::Parser, scanner::Scanner, stmt::signal::Signal, tokens::TokenType};
@@ -14,12 +15,17 @@ use std::{
 #[derive(Debug, Default)]
 pub struct Interpreter {
     pub env: Rc<RefCell<Enviroment>>,
-    pub locals: HashMap<String, usize>,
+    pub locals: HashMap<Expr, usize>,
 }
 
 impl Interpreter {
-    pub fn look_up_var(&mut self, env: Rc<RefCell<Enviroment>>, identifier: &str) -> Value {
-        match self.locals.get(identifier) {
+    pub fn look_up_var(
+        &mut self,
+        env: Rc<RefCell<Enviroment>>,
+        expr: &Expr,
+        identifier: &str,
+    ) -> Value {
+        match self.locals.get(expr) {
             Some(depth) => Enviroment::get_at(env, identifier, *depth),
             None => self
                 .env
@@ -68,7 +74,7 @@ impl Interpreter {
 
         let stmts = parser_result.into_stmt();
 
-        // dbg!(&parser_result);
+        // dbg!(&stmts);
 
         // TODO: Try to understand it better
         let mut resolver = Resolver::default();

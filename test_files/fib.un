@@ -13,13 +13,13 @@ fn fib_iter(n)
 	return a;
 end
 
-fn fib_rec(n)
-	if n < 2 then
-		return n;
-	else
-		return fib_rec(n - 1) + fib_rec(n - 2);
-	end
-end
+// fn fib_rec(n)
+// 	if n < 2 then
+// 		return n;
+// 	else
+// 		return fib_rec(n - 1) + fib_rec(n - 2);
+// 	end
+// end
 
 print(fib_iter(24));
 

@@ -263,11 +263,7 @@ impl Parser {
         let mut stmts_cl = stmts.to_vec();
         stmts_cl.push(st);
 
-        let condition = Expr::binary(
-            Expr::variable(identifier.clone()),
-            condition.clone(),
-            end.clone(),
-        );
+        let condition = Expr::binary(Expr::variable(identifier), condition, end);
 
         let while_stmt = Stmt::while_stmt(condition, stmts_cl);
 
@@ -761,7 +757,12 @@ impl Parser {
 
         let condition = Self::consume(
             tokens,
-            vec![TokenType::Lesser, TokenType::Greater],
+            vec![
+                TokenType::Lesser,
+                TokenType::LesserEqual,
+                TokenType::Greater,
+                TokenType::GreaterEqual,
+            ], // NOTE: If missing i could default to Lesser
             ParserError::MissingRangeCondition,
         )?;
 

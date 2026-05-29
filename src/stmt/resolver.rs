@@ -10,7 +10,7 @@ type Scope = HashMap<String, bool>; // TODO: Extend to an Enum to check if a var
 
 #[derive(Default)]
 pub struct Resolver {
-    locals: HashMap<String, usize>,
+    locals: HashMap<Expr, usize>,
     scopes: Vec<Rc<RefCell<Scope>>>,
     cur_fun: Option<String>, // TODO: He uses this to evaluate out of place returns, I don't need it because of signals, but it could be useful later
 }
@@ -32,10 +32,7 @@ impl Resolver {
     }
 
     fn resolve_expr(&mut self, expr: &Expr) {
-        let scope = match self.scopes.last() {
-            Some(s) => s.clone(),
-            None => Rc::new(RefCell::new(HashMap::new())), // NOTE: IDK don't think this is needed
-        };
+        let scope = self.scopes.last().cloned().unwrap_or_default();
         expr.accept(scope, self)
     }
 
@@ -53,10 +50,10 @@ impl Resolver {
         }
     }
 
-    fn resolve_local(&mut self, identifier: &str) {
+    fn resolve_local(&mut self, expr: Expr, identifier: &str) {
         for (depth, scope) in self.scopes.iter().rev().enumerate() {
             if scope.borrow().contains_key(identifier) {
-                self.locals.insert(identifier.to_string(), depth);
+                self.locals.insert(expr, depth);
                 break;
             }
         }
@@ -103,7 +100,7 @@ impl Resolver {
         self.scopes.pop();
     }
 
-    pub fn into_locals(self) -> HashMap<String, usize> {
+    pub fn into_locals(self) -> HashMap<Expr, usize> {
         self.locals
     }
 }
@@ -171,7 +168,11 @@ impl StmtVisitor<(), HashMap<String, bool>> for Resolver {
         self.resolve_expr(expr);
     }
 
-    fn visit_break(&mut self) {} // NOTE: Nothign to resolve // TODO: There's actually something to resolve... If it's outside of a loop
+    fn visit_break(&mut self) {
+        if self.cur_fun.is_none() {
+            panic!("Break outside of function"); // TODO: Again, not cool to panic, but this will be rewritten from scratch
+        }
+    }
 }
 
 impl ExprVisitor<(), Scope> for Resolver {
@@ -181,7 +182,7 @@ impl ExprVisitor<(), Scope> for Resolver {
         if let Expr::Variable(t) = target
             && let TokenType::Identifier(s) = &t.token_type
         {
-            self.resolve_local(s);
+            self.resolve_local(target.clone(), s);
         }
     }
 
@@ -213,7 +214,7 @@ impl ExprVisitor<(), Scope> for Resolver {
             {
                 panic!("Can't read local variable before it's own initializer."); // TODO: Not panic?
             }
-            self.resolve_local(s);
+            self.resolve_local(Expr::variable(inner.clone()), s);
         }
     }
 

@@ -40,8 +40,8 @@ impl Enviroment {
             .variables
             .borrow()
             .get(identifier)
-            .unwrap()
-            .clone() // TODO: Reexamine again...
+            .cloned()
+            .unwrap_or_else(|| panic!("Variable '{}' not found at depth {}", identifier, depth))
     }
 
     pub fn define_at(env: Rc<RefCell<Enviroment>>, identifier: &str, v: Value, depth: usize) {
@@ -62,7 +62,8 @@ impl Enviroment {
             };
 
             // TODO: Fix
-            cur = next.expect("Idk it's late");
+            cur = next
+                .unwrap_or_else(|| panic!("Invalid depth {}: environment chain too short", depth));
         }
 
         cur

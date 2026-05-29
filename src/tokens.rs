@@ -1,6 +1,9 @@
-use std::fmt::{Debug, Display, Formatter, Result};
+use std::{
+    fmt::{Debug, Display, Formatter, Result},
+    hash::Hash,
+};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Hash)]
 pub struct Token {
     pub token_type: TokenType,
     pub line: (usize, usize),
@@ -22,7 +25,7 @@ impl Debug for Token {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialOrd)]
 pub enum TokenType {
     // Single char tokens
     LeftParenthesis,
@@ -91,6 +94,21 @@ pub enum TokenType {
     // Continue,
     Comment(String),
     Space,
+}
+
+impl PartialEq for TokenType {
+    fn eq(&self, other: &Self) -> bool {
+        // Compare discriminants first
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+}
+
+impl Eq for TokenType {}
+
+impl Hash for TokenType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+    }
 }
 
 impl Display for TokenType {

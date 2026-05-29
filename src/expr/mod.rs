@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 pub mod eval;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Hash)]
 pub enum Expr {
     Assignment {
         target: Box<Expr>,

@@ -42,24 +42,20 @@ impl ExprVisitor<Value, Enviroment> for Interpreter {
     ) -> Value {
         let val = expr.accept(env.clone(), self);
 
-        match target {
-            Expr::Variable(token) => match &token.token_type {
-                TokenType::Identifier(s) => {
-                    match self.locals.get(s) {
-                        Some(depth) => {
-                            Enviroment::define_at(env, s, val.clone(), *depth);
-                        }
-                        None => {
-                            self.env.borrow_mut().update_var(s, val.clone());
-                        }
-                    }
-
-                    val
+        if let Expr::Variable(token) = target
+            && let TokenType::Identifier(s) = &token.token_type
+        {
+            match self.locals.get(target) {
+                Some(depth) => {
+                    Enviroment::define_at(env, s, val.clone(), *depth);
                 }
-                _ => unreachable!(),
-            },
-            _ => panic!("Invalid assignment target"),
+                None => {
+                    self.env.borrow_mut().update_var(s, val.clone());
+                }
+            }
         }
+
+        val
     }
 
     fn visit_binary(
@@ -205,7 +201,9 @@ impl ExprVisitor<Value, Enviroment> for Interpreter {
 
     fn visit_variable(&mut self, env: Rc<RefCell<Enviroment>>, inner: &Token) -> Value {
         match &inner.token_type {
-            TokenType::Identifier(s) => self.look_up_var(env.clone(), s),
+            TokenType::Identifier(s) => {
+                self.look_up_var(env.clone(), &Expr::variable(inner.clone()), s)
+            }
             _ => unreachable!(),
         }
     }
