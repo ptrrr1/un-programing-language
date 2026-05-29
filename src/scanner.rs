@@ -10,15 +10,6 @@ use crate::{
     tokens::{Token, TokenType},
 };
 
-enum States {
-    Start,
-    InNumber,
-    InString,
-    InIdentifier,
-    InExposedFunction,
-    InComment,
-}
-
 #[derive(Debug, Default)]
 pub struct ScannerResult {
     errors: Vec<Error<ScannerError>>,
@@ -72,223 +63,227 @@ impl Scanner {
 
     pub fn scan_line(line: String, pos_v: usize) -> ScannerResult {
         let mut scanner_result = ScannerResult::default();
-
         let mut chars = line.chars().enumerate().peekable();
-        let mut literal = String::new();
 
-        let mut state = States::Start;
+        while let Some((_, char)) = chars.peek() {
+            if char.is_whitespace() {
+                chars.next();
+                continue;
+            }
 
-        let mut seen_dot = false;
-
-        while let Some((pos_h, char)) = chars.next() {
-            match state {
-                States::Start => match char {
-                    _ if char.is_ascii_digit() => {
-                        seen_dot = false;
-                        literal.push(char);
-
-                        match chars.peek() {
-                            Some((_, c)) if c.is_ascii_digit() || *c == '.' || *c == '_' => {
-                                state = States::InNumber;
-                                continue;
-                            }
-                            Some((_, c)) if c.is_ascii_alphabetic() => {
-                                scanner_result.add_token((pos_v, pos_h), &literal);
-                                literal.clear();
-                                state = States::Start;
-
-                                scanner_result.errors.push(Error::new(
-                                    Pos::Known(pos_v, pos_h),
-                                    ScannerError::MissingSeparation,
-                                ));
-                            }
-                            _ => {
-                                scanner_result.add_token((pos_v, pos_h), &literal);
-                                literal.clear();
-                            }
-                        }
-                    }
-                    _ if char.is_ascii_alphabetic() || char == '_' => {
-                        literal.push(char);
-
-                        if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
-                            state = States::InIdentifier; // Or Keyword
-                            continue;
-                        }
-
-                        scanner_result.add_token((pos_v, pos_h), &literal);
-                        literal.clear();
-                    }
-                    '"' => {
-                        literal.push(char);
-                        state = States::InString
-                    }
-                    '@' => {
-                        literal.push(char);
-                        state = States::InExposedFunction
-                    }
-                    '/' if chars.peek().is_some_and(|(_, c)| *c == '/') => {
-                        literal.push(char);
-                        state = States::InComment
-                    }
-                    _ => {
-                        literal.push(char);
-
-                        if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
-                            continue;
-                        }
-
-                        scanner_result.add_token((pos_v, pos_h), &literal);
-                        literal.clear();
-                    }
-                },
-
-                States::InNumber => match char {
-                    // 12.34.54 => '12.3456' + error
-                    '.' => {
-                        match chars.peek() {
-                            Some((_, c)) if *c == '_' => {
-                                scanner_result.errors.push(Error::new(
-                                    Pos::Known(pos_v, pos_h),
-                                    ScannerError::InvalidToken(c.to_string()),
-                                ));
-
-                                continue;
-                            }
-                            Some((_, c)) if c.is_ascii_digit() && !seen_dot => literal.push(char),
-                            Some((_, c)) if c.is_ascii_digit() && seen_dot => continue,
-                            Some((_, c)) if *c == '.' => {
-                                scanner_result.add_token((pos_v, pos_h - 1), &literal);
-                                literal.clear();
-                                literal.push(char); // Reprocess it, expecting TokenType::DotDot
-                                state = States::Start;
-                            }
-                            _ => {
-                                scanner_result.add_token((pos_v, pos_h - 1), &literal);
-                                scanner_result.add_token((pos_v, pos_h), &char.to_string());
-                                literal.clear();
-                                state = States::Start;
-                            }
-                        }
-
-                        seen_dot = true;
-                    }
-                    // NOTE: Allow '_' to help write numbers
-                    '_' => {
-                        match chars.peek() {
-                            Some((_, c)) if c.is_ascii_digit() => {}
-                            Some((_, c)) if *c == '.' || *c == '_' => {
-                                scanner_result.errors.push(Error::new(
-                                    Pos::Known(pos_v, pos_h),
-                                    ScannerError::UnexpectedNumberSeparator,
-                                ));
-                            }
-                            _ => {
-                                scanner_result.errors.push(Error::new(
-                                    Pos::Known(pos_v, pos_h),
-                                    ScannerError::UnexpectedNumberSeparator,
-                                ));
-
-                                scanner_result.add_token((pos_v, pos_h), &literal);
-                                literal.clear();
-                                state = States::Start;
-                            }
-                        }
-
-                        continue;
-                    }
-                    _ if char.is_ascii_digit() => {
-                        literal.push(char);
-                        match chars.peek() {
-                            Some((_, c)) if c.is_ascii_digit() || *c == '_' => continue,
-                            Some((_, c)) if *c == '.' && !seen_dot => continue,
-                            Some((_, c)) if *c == '.' && seen_dot => {
-                                scanner_result.errors.push(Error::new(
-                                    Pos::Known(pos_v, pos_h),
-                                    ScannerError::MultipleDecimalDivider,
-                                ));
-
-                                continue;
-                            }
-                            Some((_, c)) if c.is_ascii_alphabetic() => {
-                                // Consume token
-                                scanner_result.errors.push(Error::new(
-                                    Pos::Known(pos_v, pos_h),
-                                    ScannerError::MissingSeparation,
-                                ));
-                            }
-                            _ => {} // Consume token
-                        }
-
-                        scanner_result.add_token((pos_v, pos_h), &literal);
-                        literal.clear();
-                        state = States::Start;
-                    }
-                    _ => unreachable!(),
-                },
-
-                States::InString => match char {
-                    '"' => {
-                        literal.push(char);
-
-                        scanner_result.add_token((pos_v, pos_h), &literal);
-                        literal.clear();
-                        state = States::Start;
-                    }
-                    _ if chars.peek().is_none() => {
-                        scanner_result.errors.push(Error::new(
-                            Pos::Known(pos_v, pos_h),
-                            ScannerError::UnclosedString,
-                        ));
-                    } // error
-                    _ => literal.push(char),
-                },
-
-                States::InIdentifier | States::InExposedFunction => match char {
-                    _ if char.is_ascii_alphanumeric() || char == '_' => {
-                        literal.push(char);
-
-                        if Scanner::makes_token_with_next(&mut chars, &literal).is_some() {
-                            continue;
-                        }
-
-                        scanner_result.add_token((pos_v, pos_h), &literal);
-                        literal.clear();
-                        state = States::Start;
-                    }
-                    _ => unreachable!(),
-                },
-
-                States::InComment => match char {
-                    '/' if literal == "/" => {
-                        // If it's the second '/' for starting the comment
-                        literal.push(char);
-
-                        if let Some(token) = Scanner::scan_token(&literal) {
-                            scanner_result
-                                .tokens
-                                .push(Token::new(token, (pos_v, pos_h)));
-                            literal.clear();
-                        }
-                    }
-
-                    _ if chars.peek().is_none() => {
-                        literal.push(char);
-
-                        scanner_result.tokens.push(Token::new(
-                            TokenType::Comment(literal.to_owned()),
-                            (pos_v, pos_h),
-                        ));
-
-                        literal.clear();
-                        state = States::Start;
-                    }
-                    _ => literal.push(char),
-                },
+            match char {
+                'A'..='Z' | 'a'..='z' | '_' => {
+                    Self::scan_identifier(&mut scanner_result, &mut chars, pos_v)
+                }
+                '0'..='9' => Self::scan_number(&mut scanner_result, &mut chars, pos_v),
+                '"' => Self::scan_string(&mut scanner_result, &mut chars, pos_v),
+                '/' => Self::scan_comment(&mut scanner_result, &mut chars, pos_v),
+                _ => Self::scan_others(&mut scanner_result, &mut chars, pos_v),
             }
         }
 
         scanner_result
+    }
+
+    fn scan_identifier(
+        scanner_result: &mut ScannerResult,
+        chars: &mut Peekable<Enumerate<str::Chars<'_>>>,
+        pos_v: usize,
+    ) {
+        let mut literal = String::new();
+
+        let (_, ch) = chars.next().unwrap();
+        literal.push(ch);
+
+        while let Some(&(pos_h, char)) = chars.peek() {
+            match char {
+                '_' => {
+                    let (_, ch) = chars.next().unwrap();
+                    literal.push(ch);
+
+                    if Scanner::makes_token_with_next(chars, &literal).is_none() {
+                        scanner_result.add_token((pos_v, pos_h), &literal);
+                        break;
+                    }
+                }
+                _ if char.is_ascii_alphabetic() => {
+                    let (_, ch) = chars.next().unwrap();
+                    literal.push(ch);
+
+                    if Scanner::makes_token_with_next(chars, &literal).is_none() {
+                        scanner_result.add_token((pos_v, pos_h), &literal);
+                        break;
+                    }
+                }
+                _ if char.is_ascii_digit() && literal.len() > 1 => {
+                    let (_, ch) = chars.next().unwrap();
+                    literal.push(ch);
+
+                    if Scanner::makes_token_with_next(chars, &literal).is_none() {
+                        scanner_result.add_token((pos_v, pos_h), &literal);
+                        break;
+                    }
+                }
+                _ => {
+                    scanner_result.add_token((pos_v, pos_h), &literal);
+                    break;
+                }
+            }
+        }
+    }
+
+    fn scan_number(
+        scanner_result: &mut ScannerResult,
+        chars: &mut Peekable<Enumerate<str::Chars<'_>>>,
+        pos_v: usize,
+    ) {
+        let mut seen_dot = false;
+        let mut seen_underscore = false;
+        let mut literal = String::new();
+
+        while let Some(&(pos_h, char)) = chars.peek() {
+            match char {
+                '.' => {
+                    let (pos_hi, ch) = chars.next().unwrap();
+
+                    if seen_underscore {
+                        scanner_result.errors.push(Error::new(
+                            Pos::Known(pos_v, pos_hi.saturating_sub(1)),
+                            ScannerError::UnexpectedNumberSeparator,
+                        ));
+                    }
+
+                    if seen_dot {
+                        scanner_result.errors.push(Error::new(
+                            Pos::Known(pos_v, pos_hi),
+                            ScannerError::InvalidToken(ch.to_string()),
+                        ));
+                    } else {
+                        literal.push(ch);
+                        seen_dot = true;
+                    }
+                }
+                '_' => {
+                    let (pos_hi, ch) = chars.next().unwrap();
+
+                    if literal.ends_with(".") {
+                        scanner_result.errors.push(Error::new(
+                            Pos::Known(pos_v, pos_hi),
+                            ScannerError::InvalidToken(ch.to_string()),
+                        ));
+                    }
+
+                    seen_underscore = true;
+                }
+                _ if char.is_ascii_digit() => {
+                    let (_, ch) = chars.next().unwrap();
+                    literal.push(ch);
+                    seen_underscore = false;
+                }
+
+                _ => {
+                    if !char.is_whitespace() && char != ';' {
+                        scanner_result.errors.push(Error::new(
+                            Pos::Known(pos_v, pos_h),
+                            ScannerError::MissingSeparation,
+                        ));
+                    }
+
+                    scanner_result.add_token((pos_v, pos_h), &literal);
+                    break;
+                }
+            }
+        }
+    }
+
+    fn scan_string(
+        scanner_result: &mut ScannerResult,
+        chars: &mut Peekable<Enumerate<str::Chars<'_>>>,
+        pos_v: usize,
+    ) {
+        let mut literal = String::new();
+
+        let (_, ch) = chars.next().unwrap();
+        literal.push(ch);
+
+        while let Some(&(pos_h, char)) = chars.peek() {
+            match char {
+                '"' => {
+                    let (_, ch) = chars.next().unwrap();
+                    literal.push(ch);
+
+                    scanner_result.add_token((pos_v, pos_h), &literal);
+                    break;
+                }
+                _ => {
+                    let (pos_hi, ch) = chars.next().unwrap();
+                    literal.push(ch);
+
+                    if chars.peek().is_none() {
+                        scanner_result.errors.push(Error::new(
+                            Pos::Known(pos_v, pos_hi),
+                            ScannerError::UnclosedString,
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    fn scan_comment(
+        scanner_result: &mut ScannerResult,
+        chars: &mut Peekable<Enumerate<str::Chars<'_>>>,
+        pos_v: usize,
+    ) {
+        let mut literal = String::new();
+
+        let (pos_h, ch) = chars.next().unwrap();
+        literal.push(ch);
+
+        if chars.peek().is_some_and(|(_, c)| *c == '/') {
+            let _ = chars.next();
+
+            scanner_result
+                .tokens
+                .push(Token::new(TokenType::CommentStarter, (pos_v, pos_h)));
+            literal.clear();
+
+            let mut end_h = pos_h;
+            for (pos_hi, char) in chars.by_ref() {
+                literal.push(char);
+                end_h = pos_hi;
+            }
+
+            if chars.peek().is_none() {
+                scanner_result.tokens.push(Token::new(
+                    TokenType::Comment(literal.to_owned()),
+                    (pos_v, end_h),
+                ));
+            }
+        } else {
+            scanner_result
+                .tokens
+                .push(Token::new(TokenType::Slash, (pos_v, pos_h)));
+        }
+    }
+
+    fn scan_others(
+        scanner_result: &mut ScannerResult,
+        chars: &mut Peekable<Enumerate<str::Chars<'_>>>,
+        pos_v: usize,
+    ) {
+        let mut literal = String::new();
+
+        while let Some((pos_h, char)) = chars.next() {
+            literal.push(char);
+
+            if Scanner::makes_token_with_next(chars, &literal).is_some() {
+                continue;
+            }
+
+            scanner_result.add_token((pos_v, pos_h), &literal);
+            break;
+        }
     }
 
     fn scan_token(literal: &str) -> Option<TokenType> {
@@ -336,14 +331,6 @@ impl Scanner {
             "break" => Some(TokenType::Break),
             // "continue" => Some(TokenType::Continue),
             _ if literal.chars().all(|c| c.is_ascii_whitespace()) => Some(TokenType::Space),
-            _ if literal.starts_with("@")
-                && literal
-                    .chars()
-                    .skip(1)
-                    .all(|c: char| c.is_ascii_alphanumeric() || c == '_') =>
-            {
-                Some(TokenType::ExposedFunction(literal.to_string()))
-            }
             _ if literal.starts_with("\"") && literal.ends_with("\"") => {
                 Some(TokenType::String(literal.trim_matches('"').to_string()))
             }
